@@ -1,12 +1,12 @@
-# Restoring Stable Version v1.0
+# Restoring Stable Version v2.0
 
-This document explains how to restore the working v1.0-stable version if future modifications break the firmware.
+This document explains how to restore the working v2.0-stable version if future modifications break the firmware.
 
 ## Repository Information
 
 **GitHub Repository**: https://github.com/PokeyPoke/DataTracker
-**Stable Tag**: `v1.0-stable`
-**Release**: https://github.com/PokeyPoke/DataTracker/releases/tag/v1.0-stable
+**Stable Tag**: `v2.0-stable`
+**Release**: https://github.com/PokeyPoke/DataTracker/releases/tag/v2.0-stable
 
 ## Method 1: Restore from Git Tag (Recommended)
 
@@ -33,7 +33,7 @@ cp .pio/build/esp32-c3-devkitm-1/firmware.bin docs/firmware/firmware.bin
 
 Download the pre-compiled firmware from the GitHub release:
 
-1. Go to: https://github.com/PokeyPoke/DataTracker/releases/tag/v1.0-stable
+1. Go to: https://github.com/PokeyPoke/DataTracker/releases/tag/v2.0-stable
 2. Download `firmware.bin`
 3. Use web flasher to install:
    - Open: https://pokeypoke.github.io/DataTracker/flash.html
@@ -61,11 +61,11 @@ git checkout v1.0-stable
 /home/happyllama/.local/pipx/venvs/platformio/bin/pio run
 ```
 
-## What's in v1.0-stable
+## What's in v2.0-stable
 
 ### Memory Footprint
-- **RAM**: 13.1% (42,836 bytes)
-- **Flash**: 53.7% (1.0MB)
+- **RAM**: 13.1% (42,964 bytes)
+- **Flash**: 53.9% (1.0MB)
 
 ### Key Features
 ✅ Display enabled and working
@@ -73,6 +73,8 @@ git checkout v1.0-stable
 ✅ Synchronous WebServer (no heap corruption)
 ✅ All modules functional
 ✅ Optimized WiFi scanning
+✅ **Button fully working (analog detection)**
+✅ Button debug mode available
 
 ### Architecture
 - **No AsyncWebServer** - Uses synchronous WebServer
@@ -168,12 +170,20 @@ git checkout v1.0-stable
 
 ## Version History
 
-- **v1.0-stable** (Nov 2, 2025) - First stable release
+- **v2.0-stable** (Nov 2, 2025) - Production-ready release
+  - Button fully functional (analog detection)
   - Display enabled
   - Heap corruption fixed
   - All features tested and working
   - Memory optimized
   - WiFi scanning improved
+  - Button debug mode available
+
+- **v1.0-stable** (Nov 2, 2025) - First stable release
+  - Display enabled
+  - Heap corruption fixed
+  - Memory optimized
+  - Button not yet working
 
 ---
 
