@@ -24,11 +24,13 @@ ButtonHandler button(BUTTON_PIN);
 
 // State management
 bool configMode = false;
-bool buttonDebugMode = false;  // Button debug mode
+bool buttonDebugMode = true;  // Button debug mode - START ENABLED for testing
+unsigned long buttonDebugStartTime = 0;
 unsigned long lastDisplayUpdate = 0;
 unsigned long lastSerialCheck = 0;
 #define DISPLAY_UPDATE_INTERVAL 1000  // Update display every 1s
 #define SERIAL_CHECK_INTERVAL 100     // Check serial every 100ms
+#define BUTTON_DEBUG_DURATION 30000   // Auto-disable after 30 seconds
 
 // Function prototypes
 void handleButtonEvent(ButtonEvent event);
@@ -109,6 +111,18 @@ void setup() {
         }
     }
 
+    // Start button debug mode automatically for testing
+    if (buttonDebugMode) {
+        buttonDebugStartTime = millis();
+        Serial.println("\n*** BUTTON DEBUG MODE ACTIVE ***");
+        Serial.println("Watch the DISPLAY for button status!");
+        Serial.println("- Shows ON/OFF when button is pressed");
+        Serial.println("- Shows digital and analog values");
+        Serial.println("- Auto-disables after 30 seconds");
+        Serial.println("- Type 'button' to toggle manually");
+        Serial.println("*********************************\n");
+    }
+
     Serial.println("\n=== Setup Complete ===");
     Serial.println("Type 'help' for available commands\n");
 }
@@ -131,6 +145,14 @@ void loop() {
     // Button debug mode - show button status on display
     if (buttonDebugMode) {
         #ifdef ENABLE_BUTTON
+        // Auto-disable after timeout
+        if (millis() - buttonDebugStartTime > BUTTON_DEBUG_DURATION) {
+            buttonDebugMode = false;
+            Serial.println("\n*** Button debug auto-disabled after 30s ***");
+            Serial.println("Type 'button' to re-enable\n");
+            return;
+        }
+
         int digitalVal = digitalRead(BUTTON_PIN);
         int analogVal = analogRead(BUTTON_PIN);
         bool pressed = digitalVal == HIGH;  // Assuming active-HIGH for capacitive touch
@@ -360,6 +382,7 @@ void handleSerialCommand() {
         } else {
             // Enable debug mode
             buttonDebugMode = true;
+            buttonDebugStartTime = millis();  // Reset timer
             Serial.println("\n=== Button Debug Mode ENABLED ===");
             Serial.println("Watch the DISPLAY - it will show:");
             Serial.println("- ON/OFF status (large text)");
@@ -372,6 +395,7 @@ void handleSerialCommand() {
             Serial.println("- Red LED: Indicates touch module is active");
             Serial.println();
             Serial.println("Type 'button' again to exit debug mode");
+            Serial.println("Auto-disables after 30 seconds");
             Serial.println("==================================\n");
         }
     }
