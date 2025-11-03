@@ -247,8 +247,8 @@ void handleButtonEvent(ButtonEvent event) {
 }
 
 void cycleToNextModule() {
-    // Available modules
-    const char* modules[] = {"bitcoin", "ethereum", "stock", "weather", "custom", "settings"};
+    // Available modules (settings moved to 2nd position for easier access)
+    const char* modules[] = {"bitcoin", "settings", "ethereum", "stock", "weather", "custom"};
     const int moduleCount = 6;
 
     // Find current module index
