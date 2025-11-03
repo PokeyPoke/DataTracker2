@@ -439,13 +439,8 @@ void DisplayManager::showSettings(uint32_t securityCode, const char* deviceIP, u
     snprintf(codeStr, sizeof(codeStr), "%06u", securityCode);
     u8g2.drawStr(2, 56, codeStr);
 
-    // Show time remaining in seconds (bottom left)
-    if (timeRemaining > 0) {
-        u8g2.setFont(u8g2_font_5x7_tr);
-        char timeStr[12];
-        snprintf(timeStr, sizeof(timeStr), "%lus", timeRemaining / 1000);
-        u8g2.drawStr(2, 64, timeStr);
-    }
+    // Note: Removed time countdown to prevent display flickering
+    // QR codes need to be completely static for scanning
 
     u8g2.sendBuffer();
 }

@@ -34,7 +34,6 @@ unsigned long lastDisplayUpdate = 0;
 unsigned long lastSerialCheck = 0;
 String lastDisplayedModule = "";  // Track which module is currently shown
 #define DISPLAY_UPDATE_INTERVAL 1000  // Update display every 1s
-#define SETTINGS_UPDATE_INTERVAL 5000 // Update settings display every 5s (reduce flicker)
 #define SERIAL_CHECK_INTERVAL 100     // Check serial every 100ms
 #define BUTTON_DEBUG_DURATION 30000   // Auto-disable after 30 seconds
 #define QR_UPDATE_INTERVAL 500        // Check for client connection every 500ms
@@ -209,14 +208,16 @@ void loop() {
     String activeModule = config["device"]["activeModule"] | "bitcoin";
     bool moduleChanged = (activeModule != lastDisplayedModule);
 
-    // Determine update interval based on module type
-    unsigned long updateInterval = DISPLAY_UPDATE_INTERVAL;
+    // Settings module: only update when first shown (QR codes must be static)
+    // Other modules: update every 1 second for real-time data
+    bool shouldUpdate = false;
     if (activeModule == "settings") {
-        updateInterval = SETTINGS_UPDATE_INTERVAL;  // Slower updates for QR code
+        shouldUpdate = moduleChanged;  // Only when switching to settings
+    } else {
+        shouldUpdate = moduleChanged || (now - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL);
     }
 
-    // Only redraw if module changed or interval elapsed
-    if (moduleChanged || (now - lastDisplayUpdate > updateInterval)) {
+    if (shouldUpdate) {
         display.showModule(activeModule.c_str());
         lastDisplayedModule = activeModule;
         lastDisplayUpdate = now;
