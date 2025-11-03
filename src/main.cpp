@@ -24,6 +24,7 @@ ButtonHandler button(BUTTON_PIN);
 
 // State management
 bool configMode = false;
+ConfigQRState qrState = WAITING_FOR_CLIENT;  // Track QR display state
 bool buttonDebugMode = false;  // Button debug mode - disabled by default (use 'button' command to enable)
 unsigned long buttonDebugStartTime = 0;
 unsigned long lastDisplayUpdate = 0;
@@ -31,6 +32,7 @@ unsigned long lastSerialCheck = 0;
 #define DISPLAY_UPDATE_INTERVAL 1000  // Update display every 1s
 #define SERIAL_CHECK_INTERVAL 100     // Check serial every 100ms
 #define BUTTON_DEBUG_DURATION 30000   // Auto-disable after 30 seconds
+#define QR_UPDATE_INTERVAL 500        // Check for client connection every 500ms
 
 // Function prototypes
 void handleButtonEvent(ButtonEvent event);
@@ -75,8 +77,10 @@ void setup() {
         Serial.println("No WiFi configuration found");
         Serial.println("Starting configuration AP mode...");
         configMode = true;
+        qrState = WAITING_FOR_CLIENT;
         network.startConfigAP();
-        display.showConfigMode(network.getAPName().c_str());
+        // Show WiFi QR code with credentials
+        display.showWiFiQR(network.getAPName().c_str(), network.getAPPassword().c_str());
     } else {
         // Connect to WiFi
         Serial.print("Connecting to WiFi: ");
@@ -106,8 +110,10 @@ void setup() {
             Serial.println("WiFi connection failed");
             Serial.println("Starting configuration AP mode...");
             configMode = true;
+            qrState = WAITING_FOR_CLIENT;
             network.startConfigAP();
-            display.showConfigMode(network.getAPName().c_str());
+            // Show WiFi QR code with credentials
+            display.showWiFiQR(network.getAPName().c_str(), network.getAPPassword().c_str());
         }
     }
 
@@ -118,8 +124,29 @@ void setup() {
 void loop() {
     unsigned long now = millis();
 
-    // Handle config mode
+    // Handle config mode with adaptive QR display
     if (configMode) {
+        // Check for client connection changes every 500ms
+        static unsigned long lastQRCheck = 0;
+        if (now - lastQRCheck > QR_UPDATE_INTERVAL) {
+            bool clientConnected = network.hasClientConnected();
+
+            // State transition: no client → client connected
+            if (clientConnected && qrState == WAITING_FOR_CLIENT) {
+                qrState = CLIENT_CONNECTED;
+                Serial.println("\n✓ Client connected! Showing URL QR");
+                display.showURLQR();
+            }
+            // State transition: client connected → no client
+            else if (!clientConnected && qrState == CLIENT_CONNECTED) {
+                qrState = WAITING_FOR_CLIENT;
+                Serial.println("\n⚠ Client disconnected. Showing WiFi QR");
+                display.showWiFiQR(network.getAPName().c_str(), network.getAPPassword().c_str());
+            }
+
+            lastQRCheck = now;
+        }
+
         network.handleClient();
         return;
     }

@@ -1,5 +1,26 @@
 #include "network.h"
 #include "config.h"
+#include <ESPmDNS.h>
+
+// Animal names for unique device identification (64 names)
+const char* ANIMAL_NAMES[] = {
+    "Panda", "Tiger", "Lion", "Bear",
+    "Fox", "Wolf", "Cat", "Dog",
+    "Bunny", "Otter", "Seal", "Koala",
+    "Sloth", "Lemur", "Meerkat", "Badger",
+    "Eagle", "Owl", "Hawk", "Falcon",
+    "Parrot", "Penguin", "Toucan", "Peacock",
+    "Dolphin", "Whale", "Shark", "Turtle",
+    "Octopus", "Crab", "Lobster", "Starfish",
+    "Giraffe", "Zebra", "Rhino", "Hippo",
+    "Elephant", "Monkey", "Gorilla", "Chimp",
+    "Hamster", "Squirrel", "Chipmunk", "Hedgehog",
+    "Mouse", "Rabbit", "Ferret", "Gecko",
+    "Dragon", "Phoenix", "Unicorn", "Griffin",
+    "Sphinx", "Kraken", "Hydra", "Basilisk",
+    "Cheetah", "Leopard", "Jaguar", "Cougar",
+    "Lynx", "Panther", "Puma", "Ocelot"
+};
 
 // Minimal HTML for configuration (ultra-compact)
 const char PORTAL_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
@@ -10,7 +31,7 @@ button{background:#4CAF50;color:#fff;padding:12px;border:none;width:100%;margin-
 <label>Password:</label><input type="password" id="pwd"><label>Module:</label>
 <select id="mod"><option value="bitcoin">Bitcoin</option><option value="ethereum">Ethereum</option>
 <option value="stock">Stock</option><option value="weather">Weather</option></select>
-<div id="cfg"></div><button onclick="save()">Save</button><script>
+<div id="cfg"></div><button onclick="save()">Complete Step 3/3</button><script>
 function save(){var c={ssid:document.getElementById('ssid').value,password:document.getElementById('pwd').value,
 module:document.getElementById('mod').value};fetch('/save',{method:'POST',body:JSON.stringify(c)}).then(()=>alert('Saved!'));}
 fetch('/scan').then(r=>r.json()).then(n=>{var s=document.getElementById('ssid');n.forEach(x=>s.innerHTML+=
@@ -19,11 +40,54 @@ fetch('/scan').then(r=>r.json()).then(n=>{var s=document.getElementById('ssid');
 
 NetworkManager::NetworkManager()
     : server(nullptr), isAPMode(false), lastReconnectAttempt(0),
-      cachedScanResults("[]"), lastScanTime(0), scanInProgress(false) {
+      cachedScanResults("[]"), lastScanTime(0), scanInProgress(false),
+      clientWasConnected(false) {
 }
 
 NetworkManager::~NetworkManager() {
     if (server) delete server;
+}
+
+String NetworkManager::generateAnimalName() {
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    // Use last byte to select from 64 animals
+    uint8_t index = mac[5] % 64;
+    return String(ANIMAL_NAMES[index]);
+}
+
+String NetworkManager::generateSSID() {
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+
+    // Get animal name
+    animalName = generateAnimalName();
+
+    // Get 2-char suffix from MAC for uniqueness
+    char suffix[3];
+    snprintf(suffix, sizeof(suffix), "%02X", mac[4]);
+
+    // Build SSID: DT-PandaA3 (shorter to fit password on screen)
+    apName = "DT-" + animalName + String(suffix);
+    return apName;
+}
+
+String NetworkManager::generatePassword() {
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+
+    // Format: DT + last 3 MAC bytes + !
+    // Example: DTA3F2E1!
+    char macStr[7];
+    snprintf(macStr, sizeof(macStr), "%02X%02X%02X",
+             mac[3], mac[4], mac[5]);
+
+    apPassword = "DT" + String(macStr) + "!";
+    return apPassword;
+}
+
+bool NetworkManager::hasClientConnected() {
+    return WiFi.softAPgetStationNum() > 0;
 }
 
 bool NetworkManager::connectWiFi(const char* ssid, const char* password, uint16_t timeout) {
@@ -53,21 +117,28 @@ bool NetworkManager::connectWiFi(const char* ssid, const char* password, uint16_
 }
 
 void NetworkManager::startConfigAP() {
-    // Generate AP name
-    uint8_t mac[6];
-    WiFi.macAddress(mac);
-    char macStr[5];
-    snprintf(macStr, sizeof(macStr), "%02X%02X", mac[4], mac[5]);
-    apName = "DataTracker-" + String(macStr);
+    // Generate unique SSID and password
+    generateSSID();
+    generatePassword();
 
-    Serial.print("Starting AP: ");
+    Serial.println("\n╔════════════════════════════════╗");
+    Serial.println("║   CONFIG MODE STARTED          ║");
+    Serial.println("╚════════════════════════════════╝");
+    Serial.println();
+    Serial.print("📡 Network: ");
     Serial.println(apName);
+    Serial.print("🔐 Password: ");
+    Serial.println(apPassword);
+    Serial.print("🦁 Animal: ");
+    Serial.println(animalName);
+    Serial.println();
 
+    // Start AP with password
     WiFi.mode(WIFI_AP);
-    WiFi.softAP(apName.c_str());
+    WiFi.softAP(apName.c_str(), apPassword.c_str());
 
     IPAddress IP = WiFi.softAPIP();
-    Serial.print("AP IP: ");
+    Serial.print("🌐 AP IP: ");
     Serial.println(IP);
 
     delay(1000);
@@ -75,14 +146,30 @@ void NetworkManager::startConfigAP() {
     // Switch to AP+STA for scanning
     WiFi.mode(WIFI_AP_STA);
 
+    // Start mDNS responder
+    if (!MDNS.begin("dt")) {
+        Serial.println("⚠️  mDNS failed to start");
+    } else {
+        Serial.println("✓ mDNS started: dt.local");
+        MDNS.addService("http", "tcp", 80);
+    }
+
     // Setup web server
     setupWebServer();
 
     cachedScanResults = "[]";
     scanInProgress = false;
     lastScanTime = millis();
+    clientWasConnected = false;
 
-    Serial.println("AP ready. Connect and go to 192.168.4.1");
+    Serial.println();
+    Serial.println("📱 Scan QR code on display");
+    Serial.println("   or connect manually");
+    Serial.println();
+    Serial.println("🌐 Once connected, open:");
+    Serial.println("   http://dt.local");
+    Serial.println("   http://192.168.4.1");
+    Serial.println();
 
     isAPMode = true;
 }

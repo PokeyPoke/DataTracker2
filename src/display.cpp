@@ -323,3 +323,85 @@ void DisplayManager::showButtonStatus(bool isPressed, int digitalValue, int anal
 
     u8g2.sendBuffer();
 }
+
+void DisplayManager::drawQRCode(const char* data, int x, int y, int scale) {
+    // Create QR code
+    QRCode qrcode;
+    uint8_t qrcodeData[qrcode_getBufferSize(3)];  // Version 3
+    qrcode_initText(&qrcode, qrcodeData, 3, ECC_LOW, data);
+
+    // Draw each module as a filled box
+    for (uint8_t qy = 0; qy < qrcode.size; qy++) {
+        for (uint8_t qx = 0; qx < qrcode.size; qx++) {
+            if (qrcode_getModule(&qrcode, qx, qy)) {
+                u8g2.drawBox(x + (qx * scale), y + (qy * scale), scale, scale);
+            }
+        }
+    }
+}
+
+void DisplayManager::showWiFiQR(const char* ssid, const char* password) {
+    u8g2.clearBuffer();
+
+    // Create WiFi QR code data
+    String qrData = "WIFI:T:WPA;S:" + String(ssid) + ";P:" + String(password) + ";;";
+
+    // Draw QR code on RIGHT side
+    // QR Version 3 = 29x29 modules, scale 2 = 58x58 pixels
+    // Position: x=70 (right side), y=3 (vertically centered)
+    drawQRCode(qrData.c_str(), 70, 3, 2);
+
+    // Draw info on LEFT side with plenty of space
+    u8g2.setFont(u8g2_font_helvB08_tr);
+    u8g2.drawStr(2, 10, "Step 1/3");
+
+    u8g2.setFont(u8g2_font_6x10_tr);
+    u8g2.drawStr(2, 24, "Scan QR");
+    u8g2.drawStr(2, 34, "to join");
+
+    u8g2.setFont(u8g2_font_5x7_tr);
+    u8g2.drawStr(2, 48, String(ssid).c_str());
+    u8g2.drawStr(2, 58, String(password).c_str());
+
+    u8g2.sendBuffer();
+}
+
+void DisplayManager::showURLQR() {
+    u8g2.clearBuffer();
+
+    // Create URL QR code - shorter URL
+    String qrData = "http://dt.local";
+
+    // Draw QR code on RIGHT side - same size as Step 1
+    // QR Version 3 = 29x29 modules, scale 2 = 58x58 pixels (same as WiFi QR)
+    // Position: x=70 (right side, same as WiFi QR), y=3 (vertically centered)
+    QRCode qrcode;
+    uint8_t qrcodeData[qrcode_getBufferSize(3)];  // Version 3 (same as WiFi QR)
+    qrcode_initText(&qrcode, qrcodeData, 3, ECC_LOW, qrData.c_str());
+
+    // Draw QR on right side - same position and scale as WiFi QR
+    int qrX = 70;  // Right side (same as Step 1)
+    int qrY = 3;   // Vertically centered (same as Step 1)
+    int scale = 2; // Same scale as Step 1
+    for (uint8_t qy = 0; qy < qrcode.size; qy++) {
+        for (uint8_t qx = 0; qx < qrcode.size; qx++) {
+            if (qrcode_getModule(&qrcode, qx, qy)) {
+                u8g2.drawBox(qrX + (qx * scale), qrY + (qy * scale), scale, scale);
+            }
+        }
+    }
+
+    // Draw info on LEFT side with plenty of space
+    u8g2.setFont(u8g2_font_helvB08_tr);
+    u8g2.drawStr(2, 10, "Step 2/3");
+
+    u8g2.setFont(u8g2_font_6x10_tr);
+    u8g2.drawStr(2, 24, "Scan QR");
+    u8g2.drawStr(2, 34, "to open");
+    u8g2.drawStr(2, 44, "setup");
+
+    u8g2.setFont(u8g2_font_6x10_tr);
+    u8g2.drawStr(2, 58, "dt.local");
+
+    u8g2.sendBuffer();
+}

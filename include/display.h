@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <U8g2lib.h>
 #include <Wire.h>
+#include <qrcode.h>
 
 // Display states
 enum DisplayState {
@@ -12,6 +13,12 @@ enum DisplayState {
     CONFIG_MODE,  // "Setup: DataTracker-XXXX"
     NORMAL,       // Showing metric data
     ERROR_STATE   // Error message display
+};
+
+// Config QR states
+enum ConfigQRState {
+    WAITING_FOR_CLIENT,   // Show WiFi QR
+    CLIENT_CONNECTED      // Show URL QR
 };
 
 class DisplayManager {
@@ -24,6 +31,7 @@ private:
     void drawCenteredValue(const char* value, int y);
     void drawStatusBar(bool wifiConnected, unsigned long lastUpdate, bool isStale);
     void drawHeader(const char* title);
+    void drawQRCode(const char* data, int x, int y, int scale);
 
 public:
     DisplayManager();
@@ -49,6 +57,10 @@ public:
 
     // Button debug
     void showButtonStatus(bool isPressed, int digitalValue, int analogValue);
+
+    // Adaptive QR configuration
+    void showWiFiQR(const char* ssid, const char* password);
+    void showURLQR();
 };
 
 #endif // DISPLAY_H

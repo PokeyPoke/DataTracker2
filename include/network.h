@@ -11,6 +11,8 @@ class NetworkManager {
 private:
     WebServer* server;
     String apName;
+    String apPassword;
+    String animalName;
     bool isAPMode;
     unsigned long lastReconnectAttempt;
 
@@ -18,6 +20,9 @@ private:
     String cachedScanResults;
     unsigned long lastScanTime;
     bool scanInProgress;
+
+    // Client connection tracking
+    bool clientWasConnected;
 
     // Web server handlers
     void setupWebServer();
@@ -28,6 +33,11 @@ private:
     // WiFi scanning
     void startWiFiScan();
     void updateScanResults();
+
+    // Animal name and password generation
+    String generateAnimalName();
+    String generateSSID();
+    String generatePassword();
 
 public:
     NetworkManager();
@@ -45,7 +55,10 @@ public:
 
     // Accessors
     String getAPName() { return apName; }
+    String getAPPassword() { return apPassword; }
+    String getAnimalName() { return animalName; }
     bool isInAPMode() { return isAPMode; }
+    bool hasClientConnected();
 
     // Server handling
     void handleClient();
