@@ -291,6 +291,12 @@ void DisplayManager::showModule(const char* moduleId) {
         const char* unit = module["unit"] | "";
         showCustom(value, label, unit, lastUpdate);
     }
+    else if (strcmp(moduleId, "settings") == 0) {
+        uint32_t code = module["securityCode"] | 0;
+        unsigned long timeRemaining = module["codeTimeRemaining"] | 0;
+        String ip = WiFi.localIP().toString();
+        showSettings(code, ip.c_str(), timeRemaining);
+    }
     else {
         showError("Unknown module");
     }
@@ -402,6 +408,44 @@ void DisplayManager::showURLQR() {
 
     u8g2.setFont(u8g2_font_6x10_tr);
     u8g2.drawStr(2, 58, "dt.local");
+
+    u8g2.sendBuffer();
+}
+
+void DisplayManager::showSettings(uint32_t securityCode, const char* deviceIP, unsigned long timeRemaining) {
+    u8g2.clearBuffer();
+
+    // Create URL QR code with device IP
+    String qrData = "http://" + String(deviceIP);
+
+    // Draw QR code on RIGHT side
+    // QR Version 3 = 29x29 modules, scale 2 = 58x58 pixels
+    // Position: x=70 (right side), y=3 (vertically centered)
+    drawQRCode(qrData.c_str(), 70, 3, 2);
+
+    // Draw settings info on LEFT side
+    u8g2.setFont(u8g2_font_helvB08_tr);
+    u8g2.drawStr(2, 10, "SETTINGS");
+
+    u8g2.setFont(u8g2_font_6x10_tr);
+    u8g2.drawStr(2, 22, "Scan QR");
+    u8g2.drawStr(2, 32, "to open");
+
+    // Show security code prominently
+    u8g2.setFont(u8g2_font_helvB08_tr);
+    u8g2.drawStr(2, 44, "Code:");
+    u8g2.setFont(u8g2_font_helvB10_tr);
+    char codeStr[8];
+    snprintf(codeStr, sizeof(codeStr), "%06u", securityCode);
+    u8g2.drawStr(2, 56, codeStr);
+
+    // Show time remaining in seconds (bottom left)
+    if (timeRemaining > 0) {
+        u8g2.setFont(u8g2_font_5x7_tr);
+        char timeStr[12];
+        snprintf(timeStr, sizeof(timeStr), "%lus", timeRemaining / 1000);
+        u8g2.drawStr(2, 64, timeStr);
+    }
 
     u8g2.sendBuffer();
 }

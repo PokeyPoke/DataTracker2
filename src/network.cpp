@@ -1,6 +1,11 @@
 #include "network.h"
 #include "config.h"
+#include "security.h"
 #include <ESPmDNS.h>
+#include <LittleFS.h>
+
+// External security manager (initialized in main)
+extern SecurityManager security;
 
 // Animal names for unique device identification (64 names)
 const char* ANIMAL_NAMES[] = {
@@ -38,8 +43,70 @@ fetch('/scan').then(r=>r.json()).then(n=>{var s=document.getElementById('ssid');
 '<option value="'+x.ssid+'">'+x.ssid+'</option>')});
 </script></body></html>)rawliteral";
 
+// Settings page HTML (login + configuration)
+const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
+<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Settings</title>
+<style>body{font-family:Arial;max-width:500px;margin:40px auto;padding:20px}
+.hidden{display:none}input,select{width:100%;padding:10px;margin:8px 0;box-sizing:border-box}
+button{background:#4CAF50;color:#fff;padding:12px;border:none;width:100%;margin-top:10px;cursor:pointer}
+button:hover{background:#45a049}.danger{background:#f44336}.danger:hover{background:#da190b}
+.code-input{font-size:24px;text-align:center;letter-spacing:10px}
+.error{color:#f44336;margin:10px 0}.success{color:#4CAF50;margin:10px 0}
+label{display:block;margin-top:15px;font-weight:bold}h2{text-align:center}
+.timer{text-align:center;color:#666;font-size:14px}</style></head><body>
+<div id="login-view"><h2>DataTracker Settings</h2><p>Enter code from device display:</p>
+<input type="text" id="code" class="code-input" maxlength="6" placeholder="000000" pattern="[0-9]{6}">
+<button onclick="validateCode()">Unlock Settings</button><div id="error" class="error"></div>
+<p class="timer" id="timer"></p></div>
+<div id="settings-view" class="hidden"><h2>Settings</h2>
+<label>Active Module:</label><select id="activeModule">
+<option value="bitcoin">Bitcoin</option><option value="ethereum">Ethereum</option>
+<option value="stock">Stock</option><option value="weather">Weather</option>
+<option value="custom">Custom</option><option value="settings">Settings</option></select>
+<label>Stock Ticker:</label><input type="text" id="stockTicker" placeholder="AAPL" maxlength="10">
+<label>Weather Location:</label><input type="text" id="weatherLoc" placeholder="lat,lon (e.g. 37.7749,-122.4194)">
+<label>Custom Label:</label><input type="text" id="customLabel" placeholder="Label" maxlength="20">
+<label>Custom Value:</label><input type="number" id="customValue" step="0.01">
+<label>Custom Unit:</label><input type="text" id="customUnit" placeholder="Unit" maxlength="10">
+<button onclick="saveSettings()">Save Changes</button>
+<button onclick="restartDevice()" class="danger">Restart Device</button>
+<button onclick="factoryReset()" class="danger">Factory Reset</button>
+<div id="msg"></div></div>
+<script>var token='';
+function validateCode(){var c=document.getElementById('code').value;
+if(c.length!=6){showError('Enter 6-digit code');return;}
+fetch('/api/validate',{method:'POST',body:JSON.stringify({code:parseInt(c)})})
+.then(r=>r.json()).then(d=>{if(d.valid){token=d.token;localStorage.setItem('token',token);
+showSettings();}else{showError(d.error||'Invalid code');}}).catch(()=>showError('Connection error'));}
+function showSettings(){document.getElementById('login-view').className='hidden';
+document.getElementById('settings-view').className='';loadConfig();}
+function loadConfig(){fetch('/api/config',{headers:{'Authorization':token}})
+.then(r=>r.json()).then(d=>{document.getElementById('activeModule').value=d.device.activeModule||'bitcoin';
+document.getElementById('stockTicker').value=d.modules.stock.ticker||'';
+document.getElementById('weatherLoc').value=d.modules.weather.location||'';
+document.getElementById('customLabel').value=d.modules.custom.label||'';
+document.getElementById('customValue').value=d.modules.custom.value||0;
+document.getElementById('customUnit').value=d.modules.custom.unit||'';}).catch(()=>showError('Failed to load'));}
+function saveSettings(){var cfg={device:{activeModule:document.getElementById('activeModule').value},
+modules:{stock:{ticker:document.getElementById('stockTicker').value},
+weather:{location:document.getElementById('weatherLoc').value},
+custom:{label:document.getElementById('customLabel').value,value:parseFloat(document.getElementById('customValue').value),
+unit:document.getElementById('customUnit').value}}};
+fetch('/api/config',{method:'POST',headers:{'Authorization':token},body:JSON.stringify(cfg)})
+.then(r=>r.json()).then(d=>{if(d.success){showMsg('Saved!','success');}else{showMsg('Save failed','error');}})
+.catch(()=>showMsg('Error','error'));}
+function restartDevice(){if(confirm('Restart device?')){fetch('/api/restart',{method:'POST',headers:{'Authorization':token}})
+.then(()=>showMsg('Restarting...','success'));}}
+function factoryReset(){if(confirm('Factory reset? This will erase all settings!')){
+fetch('/api/factory-reset',{method:'POST',headers:{'Authorization':token}})
+.then(()=>showMsg('Resetting...','success'));}}
+function showError(msg){document.getElementById('error').innerText=msg;}
+function showMsg(msg,type){var el=document.getElementById('msg');el.innerText=msg;
+el.className=type;setTimeout(()=>el.innerText='',3000);}
+var t=localStorage.getItem('token');if(t){token=t;showSettings();}</script></body></html>)rawliteral";
+
 NetworkManager::NetworkManager()
-    : server(nullptr), isAPMode(false), lastReconnectAttempt(0),
+    : server(nullptr), isAPMode(false), isSettingsMode(false), lastReconnectAttempt(0),
       cachedScanResults("[]"), lastScanTime(0), scanInProgress(false),
       clientWasConnected(false) {
 }
@@ -371,4 +438,230 @@ void NetworkManager::updateScanResults() {
         Serial.println("Scan complete");
         WiFi.scanDelete();
     }
+}
+
+// ============================================
+// Settings Server (for normal operation mode)
+// ============================================
+
+void NetworkManager::startSettingsServer() {
+    if (server || isAPMode) {
+        Serial.println("Cannot start settings server: server already running or in AP mode");
+        return;
+    }
+
+    Serial.println("\n=== Starting Settings Server ===");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+
+    isSettingsMode = true;
+    setupSettingsServer();
+
+    Serial.println("Settings server started");
+    Serial.println("================================\n");
+}
+
+void NetworkManager::stopSettingsServer() {
+    if (server && isSettingsMode) {
+        delete server;
+        server = nullptr;
+        isSettingsMode = false;
+        Serial.println("Settings server stopped");
+    }
+}
+
+bool NetworkManager::isSettingsServerRunning() {
+    return isSettingsMode && (server != nullptr);
+}
+
+String NetworkManager::getLocalIP() {
+    if (WiFi.status() == WL_CONNECTED) {
+        return WiFi.localIP().toString();
+    }
+    return "0.0.0.0";
+}
+
+void NetworkManager::setupSettingsServer() {
+    server = new WebServer(80);
+
+    // Settings page root
+    server->on("/", [this]() {
+        handleSettingsRoot();
+    });
+
+    // API endpoints
+    server->on("/api/validate", HTTP_POST, [this]() {
+        handleValidateCode();
+    });
+
+    server->on("/api/config", HTTP_GET, [this]() {
+        handleGetConfig();
+    });
+
+    server->on("/api/config", HTTP_POST, [this]() {
+        handleUpdateConfig();
+    });
+
+    server->on("/api/restart", HTTP_POST, [this]() {
+        handleRestart();
+    });
+
+    server->on("/api/factory-reset", HTTP_POST, [this]() {
+        handleFactoryReset();
+    });
+
+    server->begin();
+}
+
+// Settings page handlers
+void NetworkManager::handleSettingsRoot() {
+    server->send_P(200, "text/html", SETTINGS_HTML);
+}
+
+void NetworkManager::handleValidateCode() {
+    if (!server->hasArg("plain")) {
+        server->send(400, "application/json", "{\"valid\":false,\"error\":\"No data\"}");
+        return;
+    }
+
+    String body = server->arg("plain");
+    StaticJsonDocument<128> doc;
+    DeserializationError error = deserializeJson(doc, body);
+
+    if (error) {
+        server->send(400, "application/json", "{\"valid\":false,\"error\":\"Invalid JSON\"}");
+        return;
+    }
+
+    uint32_t enteredCode = doc["code"];
+
+    // Check if locked out
+    if (security.isLockedOut()) {
+        unsigned long remaining = security.getLockoutTimeRemaining();
+        char response[128];
+        snprintf(response, sizeof(response),
+                 "{\"valid\":false,\"error\":\"Locked out for %lu seconds\"}",
+                 remaining / 1000);
+        server->send(403, "application/json", response);
+        return;
+    }
+
+    // Validate code
+    if (security.validateCode(enteredCode)) {
+        // Create session
+        String token = security.createSession();
+
+        char response[128];
+        snprintf(response, sizeof(response),
+                 "{\"valid\":true,\"token\":\"%s\"}", token.c_str());
+        server->send(200, "application/json", response);
+    } else {
+        server->send(200, "application/json", "{\"valid\":false,\"error\":\"Invalid or expired code\"}");
+    }
+}
+
+void NetworkManager::handleGetConfig() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    // Serialize current configuration
+    String response;
+    serializeJson(config, response);
+    server->send(200, "application/json", response);
+}
+
+void NetworkManager::handleUpdateConfig() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    if (!server->hasArg("plain")) {
+        server->send(400, "application/json", "{\"success\":false,\"error\":\"No data\"}");
+        return;
+    }
+
+    String body = server->arg("plain");
+    StaticJsonDocument<1024> doc;
+    DeserializationError error = deserializeJson(doc, body);
+
+    if (error) {
+        server->send(400, "application/json", "{\"success\":false,\"error\":\"Invalid JSON\"}");
+        return;
+    }
+
+    // Update configuration
+    if (doc.containsKey("device")) {
+        if (doc["device"].containsKey("activeModule")) {
+            config["device"]["activeModule"] = doc["device"]["activeModule"].as<String>();
+        }
+    }
+
+    if (doc.containsKey("modules")) {
+        JsonObject modules = doc["modules"];
+
+        // Update stock config
+        if (modules.containsKey("stock") && modules["stock"].containsKey("ticker")) {
+            config["modules"]["stock"]["ticker"] = modules["stock"]["ticker"].as<String>();
+        }
+
+        // Update weather config
+        if (modules.containsKey("weather") && modules["weather"].containsKey("location")) {
+            config["modules"]["weather"]["location"] = modules["weather"]["location"].as<String>();
+        }
+
+        // Update custom config
+        if (modules.containsKey("custom")) {
+            if (modules["custom"].containsKey("label")) {
+                config["modules"]["custom"]["label"] = modules["custom"]["label"].as<String>();
+            }
+            if (modules["custom"].containsKey("value")) {
+                config["modules"]["custom"]["value"] = modules["custom"]["value"].as<float>();
+            }
+            if (modules["custom"].containsKey("unit")) {
+                config["modules"]["custom"]["unit"] = modules["custom"]["unit"].as<String>();
+            }
+        }
+    }
+
+    // Save to file
+    saveConfiguration();
+
+    server->send(200, "application/json", "{\"success\":true}");
+}
+
+void NetworkManager::handleRestart() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    server->send(200, "application/json", "{\"success\":true}");
+    delay(500);
+    ESP.restart();
+}
+
+void NetworkManager::handleFactoryReset() {
+    // Check authorization
+    String token = server->header("Authorization");
+    if (!security.validateSession(token)) {
+        server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+        return;
+    }
+
+    server->send(200, "application/json", "{\"success\":true}");
+    delay(500);
+
+    Serial.println("Factory reset via web interface");
+    LittleFS.format();
+    delay(1000);
+    ESP.restart();
 }

@@ -14,6 +14,7 @@ private:
     String apPassword;
     String animalName;
     bool isAPMode;
+    bool isSettingsMode;  // True when running settings web server
     unsigned long lastReconnectAttempt;
 
     // WiFi scan caching
@@ -24,11 +25,20 @@ private:
     // Client connection tracking
     bool clientWasConnected;
 
-    // Web server handlers
+    // Web server handlers - Setup mode
     void setupWebServer();
     void handleRoot();
     void handleScan();
     void handleSave();
+
+    // Web server handlers - Settings mode
+    void setupSettingsServer();
+    void handleSettingsRoot();
+    void handleValidateCode();
+    void handleGetConfig();
+    void handleUpdateConfig();
+    void handleRestart();
+    void handleFactoryReset();
 
     // WiFi scanning
     void startWiFiScan();
@@ -50,6 +60,11 @@ public:
     bool isConnected();
     void reconnect();
 
+    // Settings server management
+    void startSettingsServer();
+    void stopSettingsServer();
+    bool isSettingsServerRunning();
+
     // HTTP requests
     bool httpGet(const char* url, String& response, String& errorMsg);
 
@@ -59,6 +74,7 @@ public:
     String getAnimalName() { return animalName; }
     bool isInAPMode() { return isAPMode; }
     bool hasClientConnected();
+    String getLocalIP();  // Get IP address for QR code
 
     // Server handling
     void handleClient();

@@ -61,6 +61,9 @@ public:
     // Adaptive QR configuration
     void showWiFiQR(const char* ssid, const char* password);
     void showURLQR();
+
+    // Settings module
+    void showSettings(uint32_t securityCode, const char* deviceIP, unsigned long timeRemaining);
 };
 
 #endif // DISPLAY_H

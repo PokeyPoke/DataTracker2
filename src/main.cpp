@@ -4,6 +4,7 @@
 #include "network.h"
 #include "scheduler.h"
 #include "button.h"
+#include "security.h"
 #include "modules/module_interface.h"
 
 // Include all module implementations
@@ -12,11 +13,13 @@
 #include "modules/stock_module.cpp"
 #include "modules/weather_module.cpp"
 #include "modules/custom_module.cpp"
+#include "modules/settings_module.cpp"
 
 // Global objects
 DisplayManager display;
 NetworkManager network;
 Scheduler scheduler;
+SecurityManager security;
 
 #ifdef ENABLE_BUTTON
 ButtonHandler button(BUTTON_PIN);
@@ -91,6 +94,9 @@ void setup() {
             Serial.println("WiFi connected successfully!");
             configMode = false;
 
+            // Start settings web server (always available on local network)
+            network.startSettingsServer();
+
             // Initialize scheduler and register modules
             scheduler.init();
             scheduler.registerModule(new BitcoinModule());
@@ -98,6 +104,7 @@ void setup() {
             scheduler.registerModule(new StockModule());
             scheduler.registerModule(new WeatherModule());
             scheduler.registerModule(new CustomModule());
+            scheduler.registerModule(new SettingsModule());
 
             Serial.println("All modules registered");
 
@@ -228,8 +235,8 @@ void handleButtonEvent(ButtonEvent event) {
 
 void cycleToNextModule() {
     // Available modules
-    const char* modules[] = {"bitcoin", "ethereum", "stock", "weather", "custom"};
-    const int moduleCount = 5;
+    const char* modules[] = {"bitcoin", "ethereum", "stock", "weather", "custom", "settings"};
+    const int moduleCount = 6;
 
     // Find current module index
     String currentModule = config["device"]["activeModule"] | "bitcoin";
@@ -383,6 +390,7 @@ void handleSerialCommand() {
         Serial.println("3. stock    - Stock Price (configurable)");
         Serial.println("4. weather  - Weather Data (configurable)");
         Serial.println("5. custom   - Custom Number (manual entry)");
+        Serial.println("6. settings - Settings & Configuration");
         Serial.println("=========================\n");
     }
     else if (cmd == "switch") {

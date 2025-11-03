@@ -15,10 +15,19 @@ public:
     }
 
     bool fetch(String& errorMsg) override {
-        // Get lat/lon from config
+        // Get location from config (format: "lat,lon" or uses defaults)
         JsonObject weatherData = config["modules"]["weather"];
-        float lat = weatherData["latitude"] | 37.7749;
-        float lon = weatherData["longitude"] | -122.4194;
+        String location = weatherData["location"] | "37.7749,-122.4194";
+
+        // Parse lat,lon from location string
+        int commaIndex = location.indexOf(',');
+        float lat = 37.7749;  // Default: San Francisco
+        float lon = -122.4194;
+
+        if (commaIndex > 0) {
+            lat = location.substring(0, commaIndex).toFloat();
+            lon = location.substring(commaIndex + 1).toFloat();
+        }
 
         String url = "https://api.open-meteo.com/v1/forecast?latitude=" + String(lat, 4) +
                      "&longitude=" + String(lon, 4) + "&current_weather=true";
