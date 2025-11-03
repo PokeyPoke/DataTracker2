@@ -202,6 +202,9 @@ void loop() {
         network.reconnect();
     }
 
+    // Handle settings web server requests (in normal operation mode)
+    network.handleClient();
+
     // Run scheduler (fetch data if needed)
     scheduler.tick();
 
