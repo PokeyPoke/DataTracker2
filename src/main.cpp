@@ -48,8 +48,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.2.0 ===");
-    Serial.println("Build: Crypto Search Edition - Nov 3 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.2.1 ===");
+    Serial.println("Build: Crypto Fixed Edition - Nov 3 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage

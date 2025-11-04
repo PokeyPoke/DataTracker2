@@ -62,8 +62,8 @@ void DisplayManager::showSplash() {
     u8g2.clearBuffer();
 
     drawCenteredText("DATA TRACKER", 28, u8g2_font_helvB10_tr);
-    drawCenteredText("v2.2.0", 42, u8g2_font_6x10_tr);
-    drawCenteredText("Crypto Search", 54, u8g2_font_5x7_tr);
+    drawCenteredText("v2.2.1", 42, u8g2_font_6x10_tr);
+    drawCenteredText("Crypto Fixed", 54, u8g2_font_5x7_tr);
 
     u8g2.sendBuffer();
     currentState = SPLASH;
@@ -111,10 +111,14 @@ void DisplayManager::showError(const char* message) {
 }
 
 void DisplayManager::showBitcoin(float price, float change24h, unsigned long lastUpdate, bool stale) {
+    // Get crypto name from config
+    JsonObject module = config["modules"]["bitcoin"];
+    const char* cryptoName = module["cryptoName"] | "BITCOIN";
+
     u8g2.clearBuffer();
 
-    // Header
-    drawHeader("BITCOIN");
+    // Header with actual crypto name
+    drawHeader(cryptoName);
 
     // Price
     char priceStr[16];
@@ -143,10 +147,14 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
 }
 
 void DisplayManager::showEthereum(float price, float change24h, unsigned long lastUpdate, bool stale) {
+    // Get crypto name from config
+    JsonObject module = config["modules"]["ethereum"];
+    const char* cryptoName = module["cryptoName"] | "ETHEREUM";
+
     u8g2.clearBuffer();
 
-    // Header
-    drawHeader("ETHEREUM");
+    // Header with actual crypto name
+    drawHeader(cryptoName);
 
     // Price
     char priceStr[16];

@@ -1,11 +1,13 @@
 #include "network.h"
 #include "config.h"
 #include "security.h"
+#include "scheduler.h"
 #include <ESPmDNS.h>
 #include <LittleFS.h>
 
-// External security manager (initialized in main)
+// External objects (initialized in main)
 extern SecurityManager security;
+extern Scheduler scheduler;
 
 // Animal names for unique device identification (64 names)
 const char* ANIMAL_NAMES[] = {
@@ -667,8 +669,14 @@ void NetworkManager::handleUpdateConfig() {
 
         // Update bitcoin crypto config
         if (modules.containsKey("bitcoin")) {
+            bool cryptoChanged = false;
             if (modules["bitcoin"].containsKey("cryptoId")) {
-                config["modules"]["bitcoin"]["cryptoId"] = modules["bitcoin"]["cryptoId"].as<String>();
+                String newId = modules["bitcoin"]["cryptoId"].as<String>();
+                String oldId = config["modules"]["bitcoin"]["cryptoId"] | "bitcoin";
+                if (newId != oldId) {
+                    cryptoChanged = true;
+                }
+                config["modules"]["bitcoin"]["cryptoId"] = newId;
             }
             if (modules["bitcoin"].containsKey("cryptoSymbol")) {
                 config["modules"]["bitcoin"]["cryptoSymbol"] = modules["bitcoin"]["cryptoSymbol"].as<String>();
@@ -676,18 +684,38 @@ void NetworkManager::handleUpdateConfig() {
             if (modules["bitcoin"].containsKey("cryptoName")) {
                 config["modules"]["bitcoin"]["cryptoName"] = modules["bitcoin"]["cryptoName"].as<String>();
             }
+            // Clear cached data if crypto changed
+            if (cryptoChanged) {
+                config["modules"]["bitcoin"]["value"] = 0.0;
+                config["modules"]["bitcoin"]["change24h"] = 0.0;
+                config["modules"]["bitcoin"]["lastUpdate"] = 0;
+                Serial.println("Bitcoin crypto changed - cleared cache");
+            }
         }
 
         // Update ethereum crypto config
         if (modules.containsKey("ethereum")) {
+            bool cryptoChanged = false;
             if (modules["ethereum"].containsKey("cryptoId")) {
-                config["modules"]["ethereum"]["cryptoId"] = modules["ethereum"]["cryptoId"].as<String>();
+                String newId = modules["ethereum"]["cryptoId"].as<String>();
+                String oldId = config["modules"]["ethereum"]["cryptoId"] | "ethereum";
+                if (newId != oldId) {
+                    cryptoChanged = true;
+                }
+                config["modules"]["ethereum"]["cryptoId"] = newId;
             }
             if (modules["ethereum"].containsKey("cryptoSymbol")) {
                 config["modules"]["ethereum"]["cryptoSymbol"] = modules["ethereum"]["cryptoSymbol"].as<String>();
             }
             if (modules["ethereum"].containsKey("cryptoName")) {
                 config["modules"]["ethereum"]["cryptoName"] = modules["ethereum"]["cryptoName"].as<String>();
+            }
+            // Clear cached data if crypto changed
+            if (cryptoChanged) {
+                config["modules"]["ethereum"]["value"] = 0.0;
+                config["modules"]["ethereum"]["change24h"] = 0.0;
+                config["modules"]["ethereum"]["lastUpdate"] = 0;
+                Serial.println("Ethereum crypto changed - cleared cache");
             }
         }
 
@@ -717,6 +745,19 @@ void NetworkManager::handleUpdateConfig() {
 
     // Save to file
     saveConfiguration();
+
+    // Trigger forced fetches for modules that changed
+    if (doc.containsKey("modules")) {
+        JsonObject modules = doc["modules"];
+        if (modules.containsKey("bitcoin") && modules["bitcoin"].containsKey("cryptoId")) {
+            Serial.println("Requesting forced fetch for bitcoin module");
+            scheduler.requestFetch("bitcoin", true);
+        }
+        if (modules.containsKey("ethereum") && modules["ethereum"].containsKey("cryptoId")) {
+            Serial.println("Requesting forced fetch for ethereum module");
+            scheduler.requestFetch("ethereum", true);
+        }
+    }
 
     server->send(200, "application/json", "{\"success\":true}");
 }
