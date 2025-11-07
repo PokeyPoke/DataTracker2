@@ -9,8 +9,8 @@
 #define CONFIG_FILE "/config.json"
 
 // Global configuration document (StaticJsonDocument allocated in .bss, not heap)
-// Reduced to 1KB to minimize RAM usage
-extern StaticJsonDocument<1024> config;
+// Increased to 2KB to accommodate all crypto fields
+extern StaticJsonDocument<2048> config;
 
 // Configuration management functions
 bool initStorage();

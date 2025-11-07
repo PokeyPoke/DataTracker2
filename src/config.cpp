@@ -1,8 +1,8 @@
 #include "config.h"
 
 // Global configuration document (StaticJsonDocument allocated in .bss, not heap)
-// Reduced to 1KB to minimize RAM usage
-StaticJsonDocument<1024> config;
+// Increased to 2KB to accommodate all crypto fields
+StaticJsonDocument<2048> config;
 
 // Track last save time to reduce flash wear
 static unsigned long lastSaveTime = 0;
@@ -60,33 +60,9 @@ bool loadConfiguration() {
 
     Serial.println("Configuration loaded successfully");
 
-    // Migrate old configs: ensure crypto fields exist
-    bool needsSave = false;
-    JsonObject bitcoin = config["modules"]["bitcoin"];
-    if (!bitcoin.containsKey("cryptoId")) {
-        Serial.println("MIGRATION: Adding missing bitcoin crypto fields");
-        bitcoin["cryptoId"] = "bitcoin";
-        bitcoin["cryptoSymbol"] = "BTC";
-        bitcoin["cryptoName"] = "Bitcoin";
-        needsSave = true;
-    }
-
-    JsonObject ethereum = config["modules"]["ethereum"];
-    if (!ethereum.containsKey("cryptoId")) {
-        Serial.println("MIGRATION: Adding missing ethereum crypto fields");
-        ethereum["cryptoId"] = "ethereum";
-        ethereum["cryptoSymbol"] = "ETH";
-        ethereum["cryptoName"] = "Ethereum";
-        needsSave = true;
-    }
-
-    if (needsSave) {
-        Serial.println("Saving migrated config...");
-        saveConfiguration(true);  // Force save migration
-    }
-
     // Debug: Show what was loaded for crypto modules
     Serial.println("=== Loaded Config (Crypto Modules) ===");
+    JsonObject bitcoin = config["modules"]["bitcoin"];
     Serial.print("Bitcoin - ID: ");
     Serial.print(bitcoin["cryptoId"] | "NOT SET");
     Serial.print(", Name: ");
@@ -94,6 +70,7 @@ bool loadConfiguration() {
     Serial.print(", Symbol: ");
     Serial.println(bitcoin["cryptoSymbol"] | "NOT SET");
 
+    JsonObject ethereum = config["modules"]["ethereum"];
     Serial.print("Ethereum - ID: ");
     Serial.print(ethereum["cryptoId"] | "NOT SET");
     Serial.print(", Name: ");
@@ -101,6 +78,16 @@ bool loadConfiguration() {
     Serial.print(", Symbol: ");
     Serial.println(ethereum["cryptoSymbol"] | "NOT SET");
     Serial.println("=======================================");
+
+    // Check if config is overflowing
+    Serial.print("Config memory usage: ");
+    Serial.print(config.memoryUsage());
+    Serial.print(" / ");
+    Serial.print(config.capacity());
+    Serial.println(" bytes");
+    if (config.overflowed()) {
+        Serial.println("WARNING: Config document overflowed! Some data may be lost!");
+    }
 
     return true;
 }
@@ -150,7 +137,17 @@ bool saveConfiguration(bool force) {
     Serial.print(ethereum["cryptoName"] | "NOT SET");
     Serial.print(", Symbol: ");
     Serial.println(ethereum["cryptoSymbol"] | "NOT SET");
-    Serial.println("=====================================");
+    Serial.println("======================================");
+
+    // Check if config is overflowing
+    Serial.print("Config memory usage: ");
+    Serial.print(config.memoryUsage());
+    Serial.print(" / ");
+    Serial.print(config.capacity());
+    Serial.println(" bytes");
+    if (config.overflowed()) {
+        Serial.println("ERROR: Config document overflowed during save! Data loss occurred!");
+    }
 
     return true;
 }
