@@ -576,7 +576,7 @@ void NetworkManager::setupSettingsServer() {
         html += "td,th{border:1px solid #666;padding:8px 12px;text-align:left}";
         html += "th{background:#2d2d2d}</style></head><body>";
         html += "<h2>Crypto Module Configuration</h2>";
-        html += "<p>Auto-refreshes every 3 seconds</p>";
+        html += "<p style='color:#888'>v2.4.2 - Debug Edition | Auto-refreshes every 3 seconds</p>";
         html += "<table><tr><th>Module</th><th>Field</th><th>Value</th></tr>";
 
         // Bitcoin module
