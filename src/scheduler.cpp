@@ -84,8 +84,8 @@ void Scheduler::requestFetch(const char* moduleId, bool forced) {
         return;
     }
 
-    // Check retry backoff
-    if (context.retryDelay > 0 && (now - context.lastFetchTime) < context.retryDelay) {
+    // Check retry backoff (unless forced)
+    if (!forced && context.retryDelay > 0 && (now - context.lastFetchTime) < context.retryDelay) {
         Serial.print("Fetch denied: retry backoff (");
         Serial.print(context.retryDelay - (now - context.lastFetchTime));
         Serial.println("s remaining)");
@@ -93,6 +93,9 @@ void Scheduler::requestFetch(const char* moduleId, bool forced) {
     }
 
     // Approve fetch
+    if (forced) {
+        Serial.println("FORCED FETCH - bypassing all cooldowns");
+    }
     context.currentModule = String(moduleId);
     context.state = FETCHING;
     executeFetch();

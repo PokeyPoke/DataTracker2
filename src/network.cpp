@@ -754,6 +754,10 @@ void NetworkManager::handleUpdateConfig() {
     // Save to file FIRST before triggering fetches
     saveConfiguration();
 
+    // Reload config to ensure everything is fresh in memory
+    Serial.println("Reloading configuration after save...");
+    loadConfiguration();
+
     // Trigger forced fetches for modules that changed
     if (doc.containsKey("modules")) {
         JsonObject modules = doc["modules"];
@@ -767,7 +771,7 @@ void NetworkManager::handleUpdateConfig() {
         }
     }
 
-    server->send(200, "application/json", "{\"success\":true}");
+    server->send(200, "application/json", "{\"success\":true,\"message\":\"Settings saved. New data will load within 10 seconds.\"}");
 }
 
 void NetworkManager::handleRestart() {
