@@ -210,6 +210,7 @@ void setDefaultConfig() {
 
     JsonObject stock = config["modules"]["stock"].to<JsonObject>();
     stock["ticker"] = "AAPL";
+    stock["name"] = "Apple Inc.";
     stock["value"] = 0.0;
     stock["change"] = 0.0;
     stock["lastUpdate"] = 0;

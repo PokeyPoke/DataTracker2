@@ -82,8 +82,18 @@ label{display:block;margin-top:15px;font-weight:bold}h2{text-align:center}
 <div id="ethResults" class="search-results"></div>
 <div id="ethCurrent" class="current-value"></div>
 </div>
-<label>Stock Ticker:</label><input type="text" id="stockTicker" placeholder="AAPL" maxlength="10">
-<label>Weather Location:</label><input type="text" id="weatherLoc" placeholder="lat,lon (e.g. 37.7749,-122.4194)">
+<label>Stock Ticker:</label>
+<div class="search-container">
+<input type="text" id="stockSearch" placeholder="Search stocks..." oninput="searchStock(this.value)">
+<div id="stockResults" class="search-results"></div>
+<div id="stockCurrent" class="current-value"></div>
+</div>
+<label>Weather Location:</label>
+<div class="search-container">
+<input type="text" id="weatherSearch" placeholder="Search city..." oninput="searchWeather(this.value)">
+<div id="weatherResults" class="search-results"></div>
+<div id="weatherCurrent" class="current-value"></div>
+</div>
 <label>Custom Label:</label><input type="text" id="customLabel" placeholder="Label" maxlength="20">
 <label>Custom Value:</label><input type="number" id="customValue" step="0.01">
 <label>Custom Unit:</label><input type="text" id="customUnit" placeholder="Unit" maxlength="10">
@@ -109,14 +119,15 @@ function handleUnauthorized(){logout();showError('Session expired. Please enter 
 function loadConfig(){fetch('/api/config',{headers:{'Authorization':token}})
 .then(r=>{if(r.status===401){handleUnauthorized();return null;}if(!r.ok){throw new Error('Failed to load config');}return r.json();})
 .then(d=>{if(!d)return;document.getElementById('activeModule').value=d.device.activeModule||'bitcoin';
-document.getElementById('stockTicker').value=d.modules.stock.ticker||'';
-document.getElementById('weatherLoc').value=d.modules.weather.location||'';
-document.getElementById('customLabel').value=d.modules.custom.label||'';
-document.getElementById('customValue').value=d.modules.custom.value||0;
-document.getElementById('customUnit').value=d.modules.custom.unit||'';
 window.bitcoin_config={cryptoId:d.modules.bitcoin.cryptoId||'bitcoin',cryptoSymbol:d.modules.bitcoin.cryptoSymbol||'BTC',cryptoName:d.modules.bitcoin.cryptoName||'Bitcoin'};
 window.ethereum_config={cryptoId:d.modules.ethereum.cryptoId||'ethereum',cryptoSymbol:d.modules.ethereum.cryptoSymbol||'ETH',cryptoName:d.modules.ethereum.cryptoName||'Ethereum'};
-updateCryptoDisplay('bitcoin',d.modules.bitcoin);updateCryptoDisplay('ethereum',d.modules.ethereum);})
+window.stock_config={ticker:d.modules.stock.ticker||'AAPL',name:d.modules.stock.name||'Apple Inc.'};
+window.weather_config={location:d.modules.weather.location||'San Francisco',lat:d.modules.weather.latitude||37.7749,lon:d.modules.weather.longitude||-122.4194};
+updateCryptoDisplay('bitcoin',d.modules.bitcoin);updateCryptoDisplay('ethereum',d.modules.ethereum);
+updateStockDisplay(d.modules.stock);updateWeatherDisplay(d.modules.weather);
+document.getElementById('customLabel').value=d.modules.custom.label||'';
+document.getElementById('customValue').value=d.modules.custom.value||0;
+document.getElementById('customUnit').value=d.modules.custom.unit||'';})
 .catch(e=>{console.error('Load config error:',e);showMsg('Failed to load settings. Please try again.','error');});}
 function updateCryptoDisplay(module,data){var prefix=module==='bitcoin'?'btc':'eth';
 var cur=document.getElementById(prefix+'Current');
@@ -140,10 +151,46 @@ function selectCrypto(module,id,symbol,name){var prefix=module==='bitcoin'?'btc'
 window[module+'_config']={cryptoId:id,cryptoSymbol:symbol,cryptoName:name};
 document.getElementById(prefix+'Search').value='';
 hideResults(module);updateCryptoDisplay(module,{cryptoName:name,cryptoSymbol:symbol});}
+function updateStockDisplay(data){var cur=document.getElementById('stockCurrent');
+if(data.name){cur.innerHTML='Current: '+data.name+' ('+data.ticker+')';}else{cur.innerHTML='Current: Apple Inc. (AAPL)';}}
+function searchStock(query){clearTimeout(searchTimeouts['stock']);
+if(query.length<1){document.getElementById('stockResults').style.display='none';return;}
+var results=document.getElementById('stockResults');
+results.innerHTML='<div class="search-item">Searching...</div>';
+results.style.display='block';
+searchTimeouts['stock']=setTimeout(()=>{
+fetch('https://query1.finance.yahoo.com/v1/finance/search?q='+encodeURIComponent(query)+'&quotesCount=5')
+.then(r=>r.json()).then(d=>{var html='';
+if(d.quotes&&d.quotes.length>0){d.quotes.forEach(q=>{if(q.quoteType==='EQUITY'){
+html+='<div class="search-item" onclick="selectStock(\''+q.symbol.replace(/'/g,"\\'")+'\',\''+q.shortname.replace(/'/g,"\\'")+'\')">';
+html+=q.shortname+' ('+q.symbol+')</div>';}});}
+results.innerHTML=html||'<div class="search-item">No results</div>';}).catch(()=>{results.innerHTML='<div class="search-item">Error searching</div>';});},300);}
+function selectStock(ticker,name){window.stock_config={ticker:ticker,name:name};
+document.getElementById('stockSearch').value='';
+setTimeout(()=>{document.getElementById('stockResults').style.display='none';},200);
+updateStockDisplay({ticker:ticker,name:name});}
+function updateWeatherDisplay(data){var cur=document.getElementById('weatherCurrent');
+if(data.location){cur.innerHTML='Current: '+data.location+' ('+data.latitude+', '+data.longitude+')';}else{cur.innerHTML='Current: San Francisco';}}
+function searchWeather(query){clearTimeout(searchTimeouts['weather']);
+if(query.length<2){document.getElementById('weatherResults').style.display='none';return;}
+var results=document.getElementById('weatherResults');
+results.innerHTML='<div class="search-item">Searching...</div>';
+results.style.display='block';
+searchTimeouts['weather']=setTimeout(()=>{
+fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(query)+'&count=5&language=en&format=json')
+.then(r=>r.json()).then(d=>{var html='';
+if(d.results){d.results.forEach(city=>{
+html+='<div class="search-item" onclick="selectWeather(\''+city.name.replace(/'/g,"\\'")+'\','+city.latitude+','+city.longitude+',\''+(city.country||'').replace(/'/g,"\\'")+'\')">';
+html+=city.name+(city.admin1?', '+city.admin1:'')+(city.country?' ('+city.country+')':'')+'</div>';});}
+results.innerHTML=html||'<div class="search-item">No results</div>';}).catch(()=>{results.innerHTML='<div class="search-item">Error searching</div>';});},300);}
+function selectWeather(location,lat,lon,country){window.weather_config={location:location+(country?' ('+country+')':''),lat:lat,lon:lon};
+document.getElementById('weatherSearch').value='';
+setTimeout(()=>{document.getElementById('weatherResults').style.display='none';},200);
+updateWeatherDisplay({location:location+(country?' ('+country+')':''),latitude:lat,longitude:lon});}
 function saveSettings(){var cfg={device:{activeModule:document.getElementById('activeModule').value},
 modules:{bitcoin:window.bitcoin_config||{},ethereum:window.ethereum_config||{},
-stock:{ticker:document.getElementById('stockTicker').value},
-weather:{location:document.getElementById('weatherLoc').value},
+stock:window.stock_config||{ticker:'AAPL'},
+weather:window.weather_config||{location:'San Francisco',latitude:37.7749,longitude:-122.4194},
 custom:{label:document.getElementById('customLabel').value,value:parseFloat(document.getElementById('customValue').value)||0,
 unit:document.getElementById('customUnit').value}}};
 console.log('Saving config:',cfg);
@@ -576,7 +623,7 @@ void NetworkManager::setupSettingsServer() {
         html += "td,th{border:1px solid #666;padding:8px 12px;text-align:left}";
         html += "th{background:#2d2d2d}</style></head><body>";
         html += "<h2>Crypto Module Configuration</h2>";
-        html += "<p style='color:#888'>v2.5.0 - Final Fix | Auto-refreshes every 3 seconds</p>";
+        html += "<p style='color:#888'>v2.6.0 - Unified Search | Auto-refreshes every 3 seconds</p>";
         html += "<table><tr><th>Module</th><th>Field</th><th>Value</th></tr>";
 
         // Bitcoin module
@@ -779,13 +826,26 @@ void NetworkManager::handleUpdateConfig() {
         }
 
         // Update stock config
-        if (modules.containsKey("stock") && modules["stock"].containsKey("ticker")) {
-            config["modules"]["stock"]["ticker"] = modules["stock"]["ticker"].as<String>();
+        if (modules.containsKey("stock")) {
+            if (modules["stock"].containsKey("ticker")) {
+                config["modules"]["stock"]["ticker"] = modules["stock"]["ticker"].as<String>();
+            }
+            if (modules["stock"].containsKey("name")) {
+                config["modules"]["stock"]["name"] = modules["stock"]["name"].as<String>();
+            }
         }
 
         // Update weather config
-        if (modules.containsKey("weather") && modules["weather"].containsKey("location")) {
-            config["modules"]["weather"]["location"] = modules["weather"]["location"].as<String>();
+        if (modules.containsKey("weather")) {
+            if (modules["weather"].containsKey("location")) {
+                config["modules"]["weather"]["location"] = modules["weather"]["location"].as<String>();
+            }
+            if (modules["weather"].containsKey("latitude")) {
+                config["modules"]["weather"]["latitude"] = modules["weather"]["latitude"].as<float>();
+            }
+            if (modules["weather"].containsKey("longitude")) {
+                config["modules"]["weather"]["longitude"] = modules["weather"]["longitude"].as<float>();
+            }
         }
 
         // Update custom config
