@@ -576,7 +576,7 @@ void NetworkManager::setupSettingsServer() {
         html += "td,th{border:1px solid #666;padding:8px 12px;text-align:left}";
         html += "th{background:#2d2d2d}</style></head><body>";
         html += "<h2>Crypto Module Configuration</h2>";
-        html += "<p style='color:#888'>v2.4.2 - Debug Edition | Auto-refreshes every 3 seconds</p>";
+        html += "<p style='color:#888'>v2.4.3 - Full Debug | Auto-refreshes every 3 seconds</p>";
         html += "<table><tr><th>Module</th><th>Field</th><th>Value</th></tr>";
 
         // Bitcoin module
@@ -600,6 +600,16 @@ void NetworkManager::setupSettingsServer() {
         html += "<tr><td>lastSuccess</td><td>" + String(ethereum["lastSuccess"] | false ? "true" : "false") + "</td></tr>";
 
         html += "</table>";
+
+        html += "<h3>Raw JSON Dump</h3>";
+        html += "<pre style='background:#2d2d2d;padding:10px;overflow:auto;max-height:400px'>";
+        String configJson;
+        serializeJsonPretty(config, configJson);
+        configJson.replace("<", "&lt;");
+        configJson.replace(">", "&gt;");
+        html += configJson;
+        html += "</pre>";
+
         html += "<p>Config memory: " + String(config.memoryUsage()) + " / " + String(config.capacity()) + " bytes</p>";
         if (config.overflowed()) {
             html += "<p style='color:#f44336;font-weight:bold'>⚠ WARNING: Config overflowed!</p>";
