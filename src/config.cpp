@@ -60,6 +60,30 @@ bool loadConfiguration() {
 
     Serial.println("Configuration loaded successfully");
 
+    // Check if essential fields exist, populate defaults if missing
+    bool needsDefaults = false;
+    if (!config.containsKey("device") || !config.containsKey("modules")) {
+        Serial.println("Config missing essential fields, populating defaults...");
+        needsDefaults = true;
+    }
+
+    // Check if crypto modules have required fields
+    if (config.containsKey("modules")) {
+        JsonObject bitcoin = config["modules"]["bitcoin"];
+        if (!bitcoin.containsKey("cryptoId")) {
+            Serial.println("Bitcoin module missing crypto fields");
+            needsDefaults = true;
+        }
+    } else {
+        needsDefaults = true;
+    }
+
+    if (needsDefaults) {
+        setDefaultConfig();
+        saveConfiguration(true);  // Force save
+        Serial.println("Default config populated and saved");
+    }
+
     // Debug: Show what was loaded for crypto modules
     Serial.println("=== Loaded Config (Crypto Modules) ===");
     JsonObject bitcoin = config["modules"]["bitcoin"];
