@@ -751,8 +751,8 @@ void NetworkManager::handleUpdateConfig() {
         }
     }
 
-    // Save to file FIRST before triggering fetches
-    saveConfiguration();
+    // Save to file FIRST before triggering fetches (force=true to bypass throttle)
+    saveConfiguration(true);
 
     // Reload config to ensure everything is fresh in memory
     Serial.println("Reloading configuration after save...");

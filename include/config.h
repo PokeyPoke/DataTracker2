@@ -15,7 +15,7 @@ extern StaticJsonDocument<1024> config;
 // Configuration management functions
 bool initStorage();
 bool loadConfiguration();
-bool saveConfiguration();
+bool saveConfiguration(bool force = false);
 void setDefaultConfig();
 
 // Module cache functions

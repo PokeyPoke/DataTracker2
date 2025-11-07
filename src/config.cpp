@@ -59,15 +59,39 @@ bool loadConfiguration() {
     }
 
     Serial.println("Configuration loaded successfully");
+
+    // Debug: Show what was loaded for crypto modules
+    Serial.println("=== Loaded Config (Crypto Modules) ===");
+    JsonObject bitcoin = config["modules"]["bitcoin"];
+    Serial.print("Bitcoin - ID: ");
+    Serial.print(bitcoin["cryptoId"] | "NOT SET");
+    Serial.print(", Name: ");
+    Serial.print(bitcoin["cryptoName"] | "NOT SET");
+    Serial.print(", Symbol: ");
+    Serial.println(bitcoin["cryptoSymbol"] | "NOT SET");
+
+    JsonObject ethereum = config["modules"]["ethereum"];
+    Serial.print("Ethereum - ID: ");
+    Serial.print(ethereum["cryptoId"] | "NOT SET");
+    Serial.print(", Name: ");
+    Serial.print(ethereum["cryptoName"] | "NOT SET");
+    Serial.print(", Symbol: ");
+    Serial.println(ethereum["cryptoSymbol"] | "NOT SET");
+    Serial.println("=======================================");
+
     return true;
 }
 
-bool saveConfiguration() {
-    // Throttle saves to reduce flash wear
+bool saveConfiguration(bool force) {
+    // Throttle saves to reduce flash wear (unless forced)
     unsigned long now = millis();
-    if (now - lastSaveTime < MIN_SAVE_INTERVAL) {
+    if (!force && now - lastSaveTime < MIN_SAVE_INTERVAL) {
         Serial.println("Skipping save (too soon since last save)");
         return true;  // Not an error, just throttled
+    }
+
+    if (force) {
+        Serial.println("FORCED SAVE - bypassing throttle");
     }
 
     File file = LittleFS.open(CONFIG_FILE, "w");
@@ -85,6 +109,26 @@ bool saveConfiguration() {
     file.close();
     lastSaveTime = now;
     Serial.println("Configuration saved successfully");
+
+    // Debug: Show what was saved for crypto modules
+    Serial.println("=== Saved Config (Crypto Modules) ===");
+    JsonObject bitcoin = config["modules"]["bitcoin"];
+    Serial.print("Bitcoin - ID: ");
+    Serial.print(bitcoin["cryptoId"] | "NOT SET");
+    Serial.print(", Name: ");
+    Serial.print(bitcoin["cryptoName"] | "NOT SET");
+    Serial.print(", Symbol: ");
+    Serial.println(bitcoin["cryptoSymbol"] | "NOT SET");
+
+    JsonObject ethereum = config["modules"]["ethereum"];
+    Serial.print("Ethereum - ID: ");
+    Serial.print(ethereum["cryptoId"] | "NOT SET");
+    Serial.print(", Name: ");
+    Serial.print(ethereum["cryptoName"] | "NOT SET");
+    Serial.print(", Symbol: ");
+    Serial.println(ethereum["cryptoSymbol"] | "NOT SET");
+    Serial.println("=====================================");
+
     return true;
 }
 
@@ -103,12 +147,18 @@ void setDefaultConfig() {
 
     // Initialize empty module data
     JsonObject bitcoin = config["modules"]["bitcoin"].to<JsonObject>();
+    bitcoin["cryptoId"] = "bitcoin";
+    bitcoin["cryptoSymbol"] = "BTC";
+    bitcoin["cryptoName"] = "Bitcoin";
     bitcoin["value"] = 0.0;
     bitcoin["change24h"] = 0.0;
     bitcoin["lastUpdate"] = 0;
     bitcoin["lastSuccess"] = false;
 
     JsonObject ethereum = config["modules"]["ethereum"].to<JsonObject>();
+    ethereum["cryptoId"] = "ethereum";
+    ethereum["cryptoSymbol"] = "ETH";
+    ethereum["cryptoName"] = "Ethereum";
     ethereum["value"] = 0.0;
     ethereum["change24h"] = 0.0;
     ethereum["lastUpdate"] = 0;
