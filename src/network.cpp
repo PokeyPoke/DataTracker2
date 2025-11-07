@@ -154,21 +154,22 @@ hideResults(module);updateCryptoDisplay(module,{cryptoName:name,cryptoSymbol:sym
 function updateStockDisplay(data){var cur=document.getElementById('stockCurrent');
 if(data.name){cur.innerHTML='Current: '+data.name+' ('+data.ticker+')';}else{cur.innerHTML='Current: Apple Inc. (AAPL)';}}
 function searchStock(query){clearTimeout(searchTimeouts['stock']);
+query=query.toUpperCase().trim();
 if(query.length<1){document.getElementById('stockResults').style.display='none';return;}
 var results=document.getElementById('stockResults');
 results.innerHTML='<div class="search-item">Searching...</div>';
 results.style.display='block';
 searchTimeouts['stock']=setTimeout(()=>{
-fetch('https://query1.finance.yahoo.com/v1/finance/search?q='+encodeURIComponent(query)+'&quotesCount=5')
-.then(r=>r.json()).then(d=>{var html='';
-if(d.quotes&&d.quotes.length>0){d.quotes.forEach(q=>{if(q.quoteType==='EQUITY'){
-html+='<div class="search-item" onclick="selectStock(\''+q.symbol.replace(/'/g,"\\'")+'\',\''+q.shortname.replace(/'/g,"\\'")+'\')">';
-html+=q.shortname+' ('+q.symbol+')</div>';}});}
-results.innerHTML=html||'<div class="search-item">No results</div>';}).catch(()=>{results.innerHTML='<div class="search-item">Error searching</div>';});},300);}
-function selectStock(ticker,name){window.stock_config={ticker:ticker,name:name};
+fetch('https://query2.finance.yahoo.com/v1/finance/search?q='+encodeURIComponent(query)+'&quotesCount=10&newsCount=0')
+.then(r=>r.ok?r.json():Promise.reject('API error')).then(d=>{var html='';
+if(d.quotes&&d.quotes.length>0){d.quotes.filter(q=>q.quoteType==='EQUITY'||q.quoteType==='ETF').slice(0,5).forEach(q=>{
+html+='<div class="search-item" onclick="selectStock(\''+q.symbol.replace(/'/g,"\\'")+'\',\''+(q.shortname||q.longname||q.symbol).replace(/'/g,"\\'")+'\')">';
+html+=(q.shortname||q.longname||q.symbol)+' ('+q.symbol+')</div>';});}
+results.innerHTML=html||'<div class="search-item">No results. Try ticker directly (e.g. AAPL)</div>';}).catch(e=>{console.error('Stock search error:',e);results.innerHTML='<div class="search-item">Search unavailable. Enter ticker directly (e.g. AAPL)</div>';});},300);}
+function selectStock(ticker,name){window.stock_config={ticker:ticker.toUpperCase(),name:name};
 document.getElementById('stockSearch').value='';
 setTimeout(()=>{document.getElementById('stockResults').style.display='none';},200);
-updateStockDisplay({ticker:ticker,name:name});}
+updateStockDisplay({ticker:ticker.toUpperCase(),name:name});}
 function updateWeatherDisplay(data){var cur=document.getElementById('weatherCurrent');
 if(data.location){cur.innerHTML='Current: '+data.location+' ('+data.latitude+', '+data.longitude+')';}else{cur.innerHTML='Current: San Francisco';}}
 function searchWeather(query){clearTimeout(searchTimeouts['weather']);
@@ -183,10 +184,12 @@ if(d.results){d.results.forEach(city=>{
 html+='<div class="search-item" onclick="selectWeather(\''+city.name.replace(/'/g,"\\'")+'\','+city.latitude+','+city.longitude+',\''+(city.country||'').replace(/'/g,"\\'")+'\')">';
 html+=city.name+(city.admin1?', '+city.admin1:'')+(city.country?' ('+city.country+')':'')+'</div>';});}
 results.innerHTML=html||'<div class="search-item">No results</div>';}).catch(()=>{results.innerHTML='<div class="search-item">Error searching</div>';});},300);}
-function selectWeather(location,lat,lon,country){window.weather_config={location:location+(country?' ('+country+')':''),lat:lat,lon:lon};
+function selectWeather(location,lat,lon,country){
+var fullLocation=location+(country?' ('+country+')':'');
+window.weather_config={location:fullLocation,lat:parseFloat(lat),lon:parseFloat(lon)};
 document.getElementById('weatherSearch').value='';
 setTimeout(()=>{document.getElementById('weatherResults').style.display='none';},200);
-updateWeatherDisplay({location:location+(country?' ('+country+')':''),latitude:lat,longitude:lon});}
+updateWeatherDisplay({location:fullLocation,latitude:lat,longitude:lon});}
 function saveSettings(){var cfg={device:{activeModule:document.getElementById('activeModule').value},
 modules:{bitcoin:window.bitcoin_config||{},ethereum:window.ethereum_config||{},
 stock:window.stock_config||{ticker:'AAPL'},
@@ -623,7 +626,7 @@ void NetworkManager::setupSettingsServer() {
         html += "td,th{border:1px solid #666;padding:8px 12px;text-align:left}";
         html += "th{background:#2d2d2d}</style></head><body>";
         html += "<h2>Crypto Module Configuration</h2>";
-        html += "<p style='color:#888'>v2.6.0 - Unified Search | Auto-refreshes every 3 seconds</p>";
+        html += "<p style='color:#888'>v2.6.1 - Search Fix | Auto-refreshes every 3 seconds</p>";
         html += "<table><tr><th>Module</th><th>Field</th><th>Value</th></tr>";
 
         // Bitcoin module

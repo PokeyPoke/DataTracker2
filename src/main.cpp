@@ -50,8 +50,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.0 ===");
-    Serial.println("Build: Unified Search Edition - Nov 7 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.1 ===");
+    Serial.println("Build: Stock/Weather Search Fix - Nov 7 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
