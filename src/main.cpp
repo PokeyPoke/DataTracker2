@@ -13,6 +13,7 @@
 #include "modules/stock_module.cpp"
 #include "modules/weather_module.cpp"
 #include "modules/custom_module.cpp"
+#include "modules/settings_module.cpp"
 
 // Global objects
 DisplayManager display;
@@ -49,7 +50,7 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.12 ===");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v1.0.0 - Clean Release ===");
     Serial.println("Build: Revert to Working Code - Nov 8 2024");
     Serial.println("Initializing...\n");
 
@@ -107,8 +108,9 @@ void setup() {
             scheduler.registerModule(new StockModule());
             scheduler.registerModule(new WeatherModule());
             scheduler.registerModule(new CustomModule());
+            scheduler.registerModule(new SettingsModule());
 
-            Serial.println("All modules registered");
+            Serial.println("All modules registered (Bitcoin, Ethereum, Stock, Weather, Custom, Settings)");
 
             // Force initial fetch of active module
             String activeModule = config["device"]["activeModule"] | "bitcoin";

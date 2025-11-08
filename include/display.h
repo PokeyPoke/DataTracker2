@@ -51,6 +51,7 @@ public:
     void showStock(const char* ticker, float price, float change, unsigned long lastUpdate, bool stale);
     void showWeather(float temp, const char* condition, const char* location, unsigned long lastUpdate, bool stale);
     void showCustom(float value, const char* label, const char* unit, unsigned long lastUpdate);
+    void showSettings(uint32_t code, unsigned long timeRemaining);
 
     // Generic module display
     void showModule(const char* moduleId);

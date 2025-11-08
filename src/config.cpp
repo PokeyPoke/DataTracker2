@@ -2,7 +2,7 @@
 
 // Global configuration document (StaticJsonDocument allocated in .bss, not heap)
 // Increased to 2KB to accommodate all crypto fields
-StaticJsonDocument<2048> config;
+StaticJsonDocument<3072> config;  // 3KB for stability with long names
 
 // Track last save time to reduce flash wear
 static unsigned long lastSaveTime = 0;

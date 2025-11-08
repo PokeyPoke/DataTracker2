@@ -1,6 +1,9 @@
 #include "display.h"
+#include "security.h"
 #include "config.h"
 #include <WiFi.h>
+
+extern SecurityManager security;
 
 DisplayManager::DisplayManager()
     : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE), currentState(SPLASH) {
@@ -62,7 +65,7 @@ void DisplayManager::showSplash() {
     u8g2.clearBuffer();
 
     drawCenteredText("DATA TRACKER", 28, u8g2_font_helvB10_tr);
-    drawCenteredText("v2.6.12", 42, u8g2_font_6x10_tr);
+    drawCenteredText("v1.0.0 - Clean Release", 42, u8g2_font_6x10_tr);
     drawCenteredText("Revert", 54, u8g2_font_5x7_tr);
 
     u8g2.sendBuffer();
@@ -269,6 +272,34 @@ void DisplayManager::showCustom(float value, const char* label, const char* unit
     currentState = NORMAL;
 }
 
+void DisplayManager::showSettings(uint32_t code, unsigned long timeRemaining) {
+    u8g2.clearBuffer();
+
+    // Header
+    drawHeader("SETTINGS");
+
+    // Instructions
+    u8g2.setFont(u8g2_font_6x10_tr);
+    u8g2.drawStr(2, 24, "Enter code on");
+    u8g2.drawStr(2, 34, "dt.local:");
+
+    // Security code (large, centered)
+    char codeStr[8];
+    snprintf(codeStr, sizeof(codeStr), "%06u", code);
+    drawCenteredValue(codeStr, 48);
+
+    // Time remaining
+    char timeStr[16];
+    unsigned long seconds = timeRemaining / 1000;
+    snprintf(timeStr, sizeof(timeStr), "(%lus left)", seconds);
+    u8g2.setFont(u8g2_font_6x10_tr);
+    int timeWidth = u8g2.getStrWidth(timeStr);
+    u8g2.drawStr((128 - timeWidth) / 2, 62, timeStr);
+
+    u8g2.sendBuffer();
+    currentState = NORMAL;
+}
+
 void DisplayManager::showModule(const char* moduleId) {
     JsonObject module = config["modules"][moduleId];
     unsigned long lastUpdate = module["lastUpdate"] | 0;
@@ -306,6 +337,11 @@ void DisplayManager::showModule(const char* moduleId) {
         const char* label = module["label"] | "CUSTOM";
         const char* unit = module["unit"] | "";
         showCustom(value, label, unit, lastUpdate);
+    }
+    else if (strcmp(moduleId, "settings") == 0) {
+        uint32_t code = module["securityCode"] | 0;
+        unsigned long timeRemaining = security.getCodeTimeRemaining();
+        showSettings(code, timeRemaining);
     }
     else {
         showError("Unknown module");

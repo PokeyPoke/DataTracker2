@@ -10,7 +10,7 @@
 
 // Global configuration document (StaticJsonDocument allocated in .bss, not heap)
 // Increased to 2KB to accommodate all crypto fields
-extern StaticJsonDocument<2048> config;
+extern StaticJsonDocument<3072> config;  // 3KB to handle long crypto/stock/location names
 
 // Configuration management functions
 bool initStorage();

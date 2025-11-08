@@ -629,13 +629,19 @@ void NetworkManager::setupSettingsServer() {
 
     // Debug endpoint (no auth required) - shows crypto module config only
     server->on("/debug", [this]() {
+        // Require authentication for debug endpoint
+        String token = server->header("Authorization");
+        if (!security.validateSession(token)) {
+            server->send(401, "text/plain", "Unauthorized - Please authenticate first");
+            return;
+        }
         String html = "<!DOCTYPE html><html><head><title>Debug Config</title>";
         html += "<style>body{font-family:monospace;padding:20px;background:#1e1e1e;color:#d4d4d4}";
         html += "table{border-collapse:collapse;margin:20px 0}";
         html += "td,th{border:1px solid #666;padding:8px 12px;text-align:left}";
         html += "th{background:#2d2d2d}</style></head><body>";
         html += "<h2>Crypto Module Configuration</h2>";
-        html += "<p style='color:#888'>v2.6.12 - Focus on Stock & Weather | Auto-refreshes every 3 seconds</p>";
+        html += "<p style='color:#888'>v1.0.0 - Clean Release - Focus on Stock & Weather | Auto-refreshes every 3 seconds</p>";
         html += "<table><tr><th>Module</th><th>Field</th><th>Value</th></tr>";
 
         // Bitcoin module
