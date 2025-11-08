@@ -1,10 +1,41 @@
 #include "security.h"
-#include "esp_random.h"  // ESP32 hardware RNG
+#include <WiFi.h>  // For MAC address entropy
 
 #define CODE_EXPIRATION_MS 300000    // 5 minutes
 #define SESSION_EXPIRATION_MS 1800000 // 30 minutes
 #define LOCKOUT_DURATION_MS 60000     // 1 minute
 #define MAX_FAILED_ATTEMPTS 3
+
+// Track if random was seeded
+static bool randomSeeded = false;
+
+// Seed random number generator with multiple entropy sources
+void seedRandom() {
+    if (randomSeeded) return;
+
+    // Combine multiple entropy sources for seed
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+
+    uint32_t seed = 0;
+    for (int i = 0; i < 6; i++) {
+        seed = (seed << 8) | mac[i];
+    }
+
+    // Mix in timing-based entropy
+    seed ^= (millis() * 1000000UL + micros());
+
+    // Mix in ADC noise from floating pins
+    seed ^= analogRead(0);
+    seed ^= (analogRead(0) << 16);
+
+    // Seed the random number generator
+    randomSeed(seed);
+    randomSeeded = true;
+
+    Serial.print("Random generator seeded with: 0x");
+    Serial.println(seed, HEX);
+}
 
 SecurityManager::SecurityManager() {
     currentCode.code = 0;
@@ -19,9 +50,11 @@ SecurityManager::SecurityManager() {
 }
 
 uint32_t SecurityManager::generateNewCode() {
-    // Reset previous code state
-    // Use ESP32 hardware RNG for cryptographically secure random numbers
-    currentCode.code = 100000 + (esp_random() % 900000);  // 6-digit code (100000-999999)
+    // Ensure random is seeded
+    seedRandom();
+
+    // Generate 6-digit code (100000-999999) using properly seeded random()
+    currentCode.code = random(100000, 1000000);  // random() is exclusive of upper bound
     currentCode.generatedAt = millis();
     currentCode.used = false;
     currentCode.failedAttempts = 0;
@@ -127,10 +160,13 @@ unsigned long SecurityManager::getLockoutTimeRemaining() {
 }
 
 String SecurityManager::createSession() {
-    // Generate random 32-character hex token using ESP32 hardware RNG
+    // Ensure random is seeded
+    seedRandom();
+
+    // Generate random 32-character hex token using properly seeded random()
     char token[33];
     for (int i = 0; i < 32; i++) {
-        token[i] = "0123456789abcdef"[esp_random() % 16];
+        token[i] = "0123456789abcdef"[random(0, 16)];
     }
     token[32] = '\0';
 

@@ -50,8 +50,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.6 ===");
-    Serial.println("Build: Hardware RNG Fix - Nov 8 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.7 ===");
+    Serial.println("Build: Proper Random Seeding - Nov 8 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
