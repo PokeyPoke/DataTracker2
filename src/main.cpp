@@ -50,8 +50,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.4 ===");
-    Serial.println("Build: Auto-Fetch Fix - Nov 7 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.5 ===");
+    Serial.println("Build: Module Cache Fix - Nov 8 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage

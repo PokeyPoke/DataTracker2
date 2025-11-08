@@ -58,8 +58,8 @@ public:
         float temp = currentWeather["temperature"];
         int weatherCode = currentWeather["weathercode"];
 
-        // Update cache
-        JsonObject data = config["modules"]["weather"].to<JsonObject>();
+        // Update cache (preserve existing fields like location, latitude, longitude)
+        JsonObject data = config["modules"]["weather"];
         data["temperature"] = temp;
         data["condition"] = getWeatherCondition(weatherCode);
         data["lastUpdate"] = millis() / 1000;

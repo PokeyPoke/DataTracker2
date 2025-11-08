@@ -15,7 +15,7 @@ public:
         // Custom module doesn't fetch from external API
         // Value is set directly by user via config portal
 
-        JsonObject data = config["modules"]["custom"].to<JsonObject>();
+        JsonObject data = config["modules"]["custom"];
         data["lastUpdate"] = millis() / 1000;
         data["lastSuccess"] = true;
 

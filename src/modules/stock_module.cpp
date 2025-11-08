@@ -54,11 +54,10 @@ public:
         float change = quote["regularMarketChangePercent"] | 0.0;
         String symbol = quote["symbol"] | "N/A";
 
-        // Update cache
-        JsonObject data = config["modules"]["stock"].to<JsonObject>();
+        // Update cache (preserve existing fields like ticker and name)
+        JsonObject data = config["modules"]["stock"];
         data["value"] = price;
         data["change"] = change;
-        data["ticker"] = symbol;
         data["lastUpdate"] = millis() / 1000;
         data["lastSuccess"] = true;
 

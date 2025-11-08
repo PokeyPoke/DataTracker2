@@ -21,7 +21,7 @@ public:
         uint32_t code = security.generateNewCode();
 
         // Store code in config for display
-        JsonObject data = config["modules"]["settings"].to<JsonObject>();
+        JsonObject data = config["modules"]["settings"];
         data["securityCode"] = code;
         data["codeTimeRemaining"] = security.getCodeTimeRemaining();
         data["lastUpdate"] = millis() / 1000;
