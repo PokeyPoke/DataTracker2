@@ -62,7 +62,7 @@ void DisplayManager::showSplash() {
     u8g2.clearBuffer();
 
     drawCenteredText("DATA TRACKER", 28, u8g2_font_helvB10_tr);
-    drawCenteredText("v2.6.8", 42, u8g2_font_6x10_tr);
+    drawCenteredText("v2.6.9", 42, u8g2_font_6x10_tr);
     drawCenteredText("Revert", 54, u8g2_font_5x7_tr);
 
     u8g2.sendBuffer();

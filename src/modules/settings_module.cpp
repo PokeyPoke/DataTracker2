@@ -42,6 +42,16 @@ public:
         JsonObject data = config["modules"]["settings"];
         uint32_t code = data["securityCode"] | 0;
 
+        // If code is 0, generate one immediately (defensive coding)
+        if (code == 0) {
+            code = security.generateNewCode();
+            data["securityCode"] = code;
+            data["codeTimeRemaining"] = security.getCodeTimeRemaining();
+            data["lastUpdate"] = millis() / 1000;
+            data["lastSuccess"] = true;
+            Serial.println("Settings: Generated code on-demand in formatDisplay()");
+        }
+
         char buffer[32];
         snprintf(buffer, sizeof(buffer), "Code: %06u", code);
         return String(buffer);
