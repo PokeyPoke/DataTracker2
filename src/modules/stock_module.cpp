@@ -22,7 +22,15 @@ public:
         Serial.print("Stock: Fetching price for ");
         Serial.println(ticker);
 
+        if (ticker.length() == 0) {
+            errorMsg = "Ticker is empty";
+            Serial.println("Stock: ERROR - ticker is empty");
+            return false;
+        }
+
         String url = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + ticker;
+        Serial.print("Stock: URL = ");
+        Serial.println(url);
 
         String response;
         if (!network.httpGetWithHeaders(url.c_str(), response, errorMsg)) {
@@ -31,6 +39,8 @@ public:
             return false;
         }
 
+        Serial.print("Stock: Response length = ");
+        Serial.println(response.length());
         Serial.print("Stock: Response received, parsing... ");
         bool success = parseResponse(response, errorMsg);
         if (!success) {
@@ -43,22 +53,50 @@ public:
     }
 
     bool parseResponse(String payload, String& errorMsg) {
+        Serial.print("Stock: parseResponse called with payload length: ");
+        Serial.println(payload.length());
+
+        if (payload.length() == 0) {
+            errorMsg = "Empty response";
+            Serial.println("Stock: ERROR - Empty response payload");
+            return false;
+        }
+
+        // Print first 100 chars of response for debugging
+        Serial.print("Stock: Response preview: ");
+        Serial.println(payload.substring(0, 100));
+
         DynamicJsonDocument doc(2048);
         DeserializationError error = deserializeJson(doc, payload);
 
         if (error) {
             errorMsg = "JSON parse error: " + String(error.c_str());
+            Serial.print("Stock: JSON parse error: ");
+            Serial.println(error.c_str());
             return false;
         }
 
-        if (!doc.containsKey("quoteResponse") || !doc["quoteResponse"].containsKey("result")) {
-            errorMsg = "Invalid response structure";
+        Serial.println("Stock: JSON parsed successfully");
+
+        if (!doc.containsKey("quoteResponse")) {
+            errorMsg = "Missing quoteResponse";
+            Serial.println("Stock: ERROR - Missing quoteResponse key");
+            return false;
+        }
+
+        if (!doc["quoteResponse"].containsKey("result")) {
+            errorMsg = "Missing result array";
+            Serial.println("Stock: ERROR - Missing result array");
             return false;
         }
 
         JsonArray results = doc["quoteResponse"]["result"];
+        Serial.print("Stock: Results array size: ");
+        Serial.println(results.size());
+
         if (results.size() == 0) {
             errorMsg = "Invalid ticker symbol";
+            Serial.println("Stock: ERROR - results array is empty");
             return false;
         }
 
@@ -66,6 +104,13 @@ public:
         float price = quote["regularMarketPrice"] | 0.0;
         float change = quote["regularMarketChangePercent"] | 0.0;
         String symbol = quote["symbol"] | "N/A";
+
+        Serial.print("Stock: Parsed - Symbol: ");
+        Serial.print(symbol);
+        Serial.print(", Price: ");
+        Serial.print(price, 2);
+        Serial.print(", Change: ");
+        Serial.println(change, 2);
 
         // Update cache
         JsonObject data = config["modules"]["stock"].to<JsonObject>();
