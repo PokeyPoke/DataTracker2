@@ -666,6 +666,13 @@ void NetworkManager::setupSettingsServer() {
 
     // Debug endpoint - trigger stock fetch and show diagnostics
     server->on("/api/test-stock", HTTP_POST, [this]() {
+        // Check authorization
+        String token = server->header("Authorization");
+        if (!security.validateSession(token)) {
+            server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+
         extern Scheduler scheduler;
 
         Serial.println("\n=== MANUAL STOCK FETCH TEST ===");
