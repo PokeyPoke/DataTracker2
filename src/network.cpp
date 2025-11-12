@@ -805,9 +805,19 @@ void NetworkManager::handleUpdateConfig() {
     }
 
     // Update configuration
+    String previousActiveModule = config["device"]["activeModule"] | "bitcoin";
     if (doc.containsKey("device")) {
         if (doc["device"].containsKey("activeModule")) {
-            config["device"]["activeModule"] = doc["device"]["activeModule"].as<String>();
+            String newActiveModule = doc["device"]["activeModule"].as<String>();
+            config["device"]["activeModule"] = newActiveModule;
+            // If activeModule changed, mark it for forced fetch
+            if (newActiveModule != previousActiveModule) {
+                // Clear lastUpdate to trigger immediate fetch
+                JsonObject moduleData = config["modules"][newActiveModule];
+                moduleData["lastUpdate"] = 0;
+                Serial.print("Active module changed to: ");
+                Serial.println(newActiveModule);
+            }
         }
     }
 
