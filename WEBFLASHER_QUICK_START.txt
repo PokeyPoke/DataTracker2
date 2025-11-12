@@ -1,0 +1,160 @@
+╔════════════════════════════════════════════════════════════════════════╗
+║         DataTracker Web Flasher - Quick Start Guide                    ║
+╚════════════════════════════════════════════════════════════════════════╝
+
+🚀 QUICK START (3 Steps)
+════════════════════════════════════════════════════════════════════════
+
+1️⃣  START THE SERVER
+   ─────────────────
+   Run this command in the DataTracker2 folder:
+
+   python3 webflasher.py
+
+   You'll see: ✅ Server running at http://localhost:8000
+
+
+2️⃣  OPEN IN BROWSER
+   ────────────────
+   Open your browser (Chrome or Edge v89+) and go to:
+
+   http://localhost:8000
+
+   You'll see the flasher interface with two buttons
+
+
+3️⃣  FLASH YOUR DEVICE
+   ──────────────────
+
+   Prerequisites:
+   • Connect ESP32-C3 via USB-C cable
+   • Use Chrome 89+ or Edge 89+ browser
+   • USB cable must be data cable (not charging cable)
+
+   Steps:
+   • Click "Install Firmware" (green) OR
+   • Click "Factory Reset & Install" (red)
+   • Select your device's USB port
+   • Wait 1-2 minutes for completion
+   • You'll see "Done!" when finished
+   • Disconnect and reconnect USB to restart device
+
+
+📱 AFTER FLASHING
+════════════════════════════════════════════════════════════════════════
+
+WiFi Setup:
+1. Device creates WiFi network: DataTracker-XXXX
+2. Connect to it from your phone/computer
+3. Go to: 192.168.4.1
+4. Configure WiFi and select your module
+5. Device connects to your WiFi
+
+
+Access Settings:
+• Once on WiFi, go to: http://dt.local
+• Or use the IP address from your router
+• Login with 6-digit code from device display
+
+
+⚙️  FIRMWARE OPTIONS
+════════════════════════════════════════════════════════════════════════
+
+Green Button - "Install Firmware"
+├─ Flashes firmware only
+├─ Keeps existing WiFi config
+├─ Keeps existing module settings
+└─ Best for updates
+
+Red Button - "Factory Reset & Install"
+├─ Erases everything on device
+├─ Erases WiFi credentials
+├─ Erases all module settings
+└─ Good for starting fresh
+
+
+🔧 TROUBLESHOOTING
+════════════════════════════════════════════════════════════════════════
+
+❌ Port not showing up
+   └─ Try different USB cable or port
+   └─ Hold BOOT button while connecting
+
+❌ Browser not supported
+   └─ Must use Chrome 89+ or Edge 89+
+   └─ Safari and Firefox don't work yet
+
+❌ Flash failed
+   └─ Close Arduino IDE / PlatformIO
+   └─ Try "Factory Reset & Install" instead
+   └─ Restart browser
+
+❌ Can't access http://dt.local
+   └─ Check WiFi is connected (look at display)
+   └─ Try using IP address instead
+   └─ Make sure you're on same WiFi network
+
+
+ℹ️  FIRMWARE INFORMATION
+════════════════════════════════════════════════════════════════════════
+
+Version: 2.6.4 (Stable)
+Platform: ESP32-C3
+Features:
+├─ Bitcoin price tracking (CoinGecko API)
+├─ Ethereum price tracking (CoinGecko API)
+├─ Stock prices (Yahoo Finance API)
+├─ Weather data (Open-Meteo API)
+├─ Custom values (manual entry)
+└─ Settings module (6-digit security codes)
+
+Size: 1.1 MB firmware
+RAM Usage: 14% (46 KB / 327 KB)
+Flash Usage: 58% (1.1 MB / 1.96 MB)
+
+
+💡 TIPS
+════════════════════════════════════════════════════════════════════════
+
+• Server works offline - no internet needed for flashing
+• Keep terminal window open while flashing
+• Don't disconnect USB during flash (only takes 1-2 minutes)
+• If stuck, press Ctrl+C in terminal to stop server
+• Device will show "DataTracker v2.6.4" on boot
+
+
+🌐 ALTERNATIVE SERVERS
+════════════════════════════════════════════════════════════════════════
+
+If Python script doesn't work, try these:
+
+Python 3.7+ (built-in):
+   cd DataTracker2/docs
+   python3 -m http.server 8000
+
+Node.js:
+   npm install -g http-server
+   cd DataTracker2/docs
+   http-server -p 8000
+
+PHP:
+   cd DataTracker2/docs
+   php -S localhost:8000
+
+VS Code:
+   Install "Live Server" extension
+   Right-click docs/flash.html
+   Select "Open with Live Server"
+
+
+📖 FOR MORE HELP
+════════════════════════════════════════════════════════════════════════
+
+See: FLASH_GUIDE.md (detailed instructions)
+Or: README.md (project documentation)
+
+
+═══════════════════════════════════════════════════════════════════════
+
+Ready to flash? Start with Step 1 above! 🚀
+
