@@ -28,23 +28,17 @@ public:
             return false;
         }
 
-        // Try Yahoo Finance with headers first
-        String url = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + ticker;
+        // Use free Finnhub API (no authentication required for free tier)
+        // Finnhub provides stock quotes without requiring API key for basic requests
+        String url = "https://finnhub.io/api/v1/quote?symbol=" + ticker;
         Serial.print("Stock: URL = ");
         Serial.println(url);
 
         String response;
-        // Try with headers first
-        if (!network.httpGetWithHeaders(url.c_str(), response, errorMsg)) {
-            Serial.print("Stock: With headers failed, trying fallback... ");
+        if (!network.httpGet(url.c_str(), response, errorMsg)) {
+            Serial.print("Stock: HTTP request failed - ");
             Serial.println(errorMsg);
-
-            // Fallback: try without headers
-            if (!network.httpGet(url.c_str(), response, errorMsg)) {
-                Serial.print("Stock: Both methods failed - ");
-                Serial.println(errorMsg);
-                return false;
-            }
+            return false;
         }
 
         Serial.print("Stock: Response length = ");
@@ -72,7 +66,7 @@ public:
 
         // Print first 100 chars of response for debugging
         Serial.print("Stock: Response preview: ");
-        Serial.println(payload.substring(0, 100));
+        Serial.println(payload.substring(0, min(100, (int)payload.length())));
 
         DynamicJsonDocument doc(2048);
         DeserializationError error = deserializeJson(doc, payload);
@@ -86,53 +80,41 @@ public:
 
         Serial.println("Stock: JSON parsed successfully");
 
-        if (!doc.containsKey("quoteResponse")) {
-            errorMsg = "Missing quoteResponse";
-            Serial.println("Stock: ERROR - Missing quoteResponse key");
+        // Finnhub response format: {"c": 150.25, "d": 1.50, "dp": 1.01, ...}
+        // c = current price, d = change in absolute value, dp = change percent
+
+        if (!doc.containsKey("c")) {
+            errorMsg = "Missing price data";
+            Serial.println("Stock: ERROR - Missing 'c' (price) in response");
             return false;
         }
 
-        if (!doc["quoteResponse"].containsKey("result")) {
-            errorMsg = "Missing result array";
-            Serial.println("Stock: ERROR - Missing result array");
-            return false;
-        }
+        float price = doc["c"] | 0.0;
+        float changePercent = doc["dp"] | 0.0;  // dp is the percentage change
 
-        JsonArray results = doc["quoteResponse"]["result"];
-        Serial.print("Stock: Results array size: ");
-        Serial.println(results.size());
-
-        if (results.size() == 0) {
-            errorMsg = "Invalid ticker symbol";
-            Serial.println("Stock: ERROR - results array is empty");
-            return false;
-        }
-
-        JsonObject quote = results[0];
-        float price = quote["regularMarketPrice"] | 0.0;
-        float change = quote["regularMarketChangePercent"] | 0.0;
-        String symbol = quote["symbol"] | "N/A";
+        // Get ticker from config to use as symbol
+        String ticker = config["modules"]["stock"]["ticker"] | "AAPL";
 
         Serial.print("Stock: Parsed - Symbol: ");
-        Serial.print(symbol);
+        Serial.print(ticker);
         Serial.print(", Price: ");
         Serial.print(price, 2);
         Serial.print(", Change: ");
-        Serial.println(change, 2);
+        Serial.println(changePercent, 2);
 
         // Update cache
         JsonObject data = config["modules"]["stock"].to<JsonObject>();
         data["value"] = price;
-        data["change"] = change;
-        data["ticker"] = symbol;
+        data["change"] = changePercent;
+        data["ticker"] = ticker;
         data["lastUpdate"] = millis() / 1000;
         data["lastSuccess"] = true;
 
-        Serial.print(symbol);
+        Serial.print(ticker);
         Serial.print(" price: $");
         Serial.print(price, 2);
         Serial.print(" (");
-        Serial.print(change, 2);
+        Serial.print(changePercent, 2);
         Serial.println("%)");
 
         return true;
