@@ -631,12 +631,15 @@ String NetworkManager::getLocalIP() {
 }
 
 void NetworkManager::setupSettingsServer() {
+    Serial.println("\n=== Setting up Settings Server ===");
     server = new WebServer(80);
+    Serial.println("WebServer created on port 80");
 
     // Settings page root
     server->on("/", [this]() {
         handleSettingsRoot();
     });
+    Serial.println("Registered: /");
 
     // API endpoints
     server->on("/api/validate", HTTP_POST, [this]() {
@@ -666,13 +669,18 @@ void NetworkManager::setupSettingsServer() {
 
     // Version endpoint (no auth required) - check firmware version
     server->on("/api/version", HTTP_GET, [this]() {
+        Serial.println("DEBUG: /api/version endpoint called!");
         String response = "{";
         response += "\"version\":\"v2.6.4-STOCK-FIX-DEBUG\",";
         response += "\"build\":\"Stock Fetch Debug - Nov 12 2024\",";
         response += "\"uptime\":" + String(millis() / 1000);
         response += "}";
+        Serial.print("DEBUG: Sending response: ");
+        Serial.println(response);
         server->send(200, "application/json", response);
+        Serial.println("DEBUG: /api/version response sent");
     });
+    Serial.println("Registered: /api/version");
 
     // Debug endpoint - trigger stock fetch and show diagnostics
     server->on("/api/test-stock", HTTP_POST, [this]() {
@@ -769,7 +777,10 @@ void NetworkManager::setupSettingsServer() {
         server->send(200, "text/html", html);
     });
 
+    Serial.println("Starting WebServer...");
     server->begin();
+    Serial.println("✓ WebServer started and listening on port 80");
+    Serial.println("=== Settings Server Setup Complete ===\n");
 }
 
 // Settings page handlers
