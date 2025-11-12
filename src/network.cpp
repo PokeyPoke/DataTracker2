@@ -664,6 +664,43 @@ void NetworkManager::setupSettingsServer() {
         handleStockSearch();
     });
 
+    // Debug endpoint - trigger stock fetch and show diagnostics
+    server->on("/api/test-stock", HTTP_POST, [this]() {
+        extern Scheduler scheduler;
+
+        Serial.println("\n=== MANUAL STOCK FETCH TEST ===");
+        String ticker = config["modules"]["stock"]["ticker"] | "AAPL";
+        Serial.print("Ticker: ");
+        Serial.println(ticker);
+
+        // Force a fetch
+        scheduler.requestFetch("stock", true);
+
+        // Wait a bit for fetch to complete
+        delay(3000);
+
+        // Get status
+        JsonObject stock = config["modules"]["stock"];
+        float price = stock["value"] | 0.0;
+        float change = stock["change"] | 0.0;
+        unsigned long lastUpdate = stock["lastUpdate"] | 0;
+        bool lastSuccess = stock["lastSuccess"] | false;
+
+        String response = "{";
+        response += "\"ticker\":\"" + String(ticker) + "\",";
+        response += "\"price\":" + String(price, 2) + ",";
+        response += "\"change\":" + String(change, 2) + ",";
+        response += "\"lastUpdate\":" + String(lastUpdate) + ",";
+        response += "\"lastSuccess\":" + String(lastSuccess ? "true" : "false");
+        response += "}";
+
+        Serial.println("Test response:");
+        Serial.println(response);
+        Serial.println("=== END TEST ===\n");
+
+        server->send(200, "application/json", response);
+    });
+
     // Debug endpoint (no auth required) - shows crypto module config only
     server->on("/debug", [this]() {
         String html = "<!DOCTYPE html><html><head><title>Debug Config</title>";
