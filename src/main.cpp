@@ -102,10 +102,14 @@ void setup() {
             network.startSettingsServer();
 
             // Initialize scheduler and register modules
+            Serial.println("\n=== Initializing Scheduler ===");
             scheduler.init();
+
+            Serial.println("Registering modules...");
             scheduler.registerModule(new BitcoinModule());
             scheduler.registerModule(new EthereumModule());
             scheduler.registerModule(new StockModule());
+            Serial.println("DEBUG: StockModule registered");
             scheduler.registerModule(new WeatherModule());
             scheduler.registerModule(new CustomModule());
             scheduler.registerModule(new SettingsModule());
@@ -116,7 +120,9 @@ void setup() {
             String activeModule = config["device"]["activeModule"] | "bitcoin";
             Serial.print("Active module: ");
             Serial.println(activeModule);
+            Serial.println("Requesting forced fetch at startup...");
             scheduler.requestFetch(activeModule.c_str(), true);
+            Serial.println("Startup fetch requested");
         } else {
             Serial.println("WiFi connection failed");
             Serial.println("Starting configuration AP mode...");
