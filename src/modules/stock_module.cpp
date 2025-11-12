@@ -28,15 +28,23 @@ public:
             return false;
         }
 
+        // Try Yahoo Finance with headers first
         String url = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + ticker;
         Serial.print("Stock: URL = ");
         Serial.println(url);
 
         String response;
+        // Try with headers first
         if (!network.httpGetWithHeaders(url.c_str(), response, errorMsg)) {
-            Serial.print("Stock: HTTP request failed - ");
+            Serial.print("Stock: With headers failed, trying fallback... ");
             Serial.println(errorMsg);
-            return false;
+
+            // Fallback: try without headers
+            if (!network.httpGet(url.c_str(), response, errorMsg)) {
+                Serial.print("Stock: Both methods failed - ");
+                Serial.println(errorMsg);
+                return false;
+            }
         }
 
         Serial.print("Stock: Response length = ");
