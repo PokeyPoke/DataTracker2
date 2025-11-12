@@ -476,6 +476,42 @@ bool NetworkManager::httpGet(const char* url, String& response, String& errorMsg
     }
 }
 
+bool NetworkManager::httpGetWithHeaders(const char* url, String& response, String& errorMsg) {
+    WiFiClientSecure* client = new WiFiClientSecure;
+    if (!client) {
+        errorMsg = "Out of memory";
+        return false;
+    }
+
+    client->setInsecure();
+
+    HTTPClient https;
+    https.begin(*client, url);
+    https.setTimeout(15000);
+
+    // Add User-Agent header for Yahoo Finance API
+    https.addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+    https.addHeader("Accept", "application/json");
+    https.addHeader("Accept-Encoding", "gzip, deflate");
+    https.addHeader("DNT", "1");
+    https.addHeader("Connection", "keep-alive");
+    https.addHeader("Upgrade-Insecure-Requests", "1");
+
+    int httpCode = https.GET();
+
+    if (httpCode == HTTP_CODE_OK) {
+        response = https.getString();
+        https.end();
+        delete client;
+        return true;
+    } else {
+        errorMsg = "HTTP " + String(httpCode);
+        https.end();
+        delete client;
+        return false;
+    }
+}
+
 void NetworkManager::startWiFiScan() {
     Serial.println("Starting WiFi scan...");
 

@@ -19,14 +19,27 @@ public:
         JsonObject stockData = config["modules"]["stock"];
         String ticker = stockData["ticker"] | "AAPL";
 
+        Serial.print("Stock: Fetching price for ");
+        Serial.println(ticker);
+
         String url = "https://query1.finance.yahoo.com/v7/finance/quote?symbols=" + ticker;
 
         String response;
-        if (!network.httpGet(url.c_str(), response, errorMsg)) {
+        if (!network.httpGetWithHeaders(url.c_str(), response, errorMsg)) {
+            Serial.print("Stock: HTTP request failed - ");
+            Serial.println(errorMsg);
             return false;
         }
 
-        return parseResponse(response, errorMsg);
+        Serial.print("Stock: Response received, parsing... ");
+        bool success = parseResponse(response, errorMsg);
+        if (!success) {
+            Serial.print("Stock: Parse failed - ");
+            Serial.println(errorMsg);
+        } else {
+            Serial.println("Stock: Parse successful");
+        }
+        return success;
     }
 
     bool parseResponse(String payload, String& errorMsg) {

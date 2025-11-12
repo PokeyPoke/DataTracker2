@@ -68,6 +68,7 @@ public:
 
     // HTTP requests
     bool httpGet(const char* url, String& response, String& errorMsg);
+    bool httpGetWithHeaders(const char* url, String& response, String& errorMsg);
 
     // Accessors
     String getAPName() { return apName; }
