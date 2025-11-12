@@ -668,6 +668,20 @@ void NetworkManager::setupSettingsServer() {
     });
 
     // Version endpoint (no auth required) - check firmware version
+    server->on("/api/version/", HTTP_GET, [this]() {
+        Serial.println("DEBUG: /api/version/ endpoint called!");
+        String response = "{";
+        response += "\"version\":\"v2.6.4-STOCK-FIX-DEBUG\",";
+        response += "\"build\":\"Stock Fetch Debug - Nov 12 2024\",";
+        response += "\"uptime\":" + String(millis() / 1000);
+        response += "}";
+        Serial.print("DEBUG: Sending response: ");
+        Serial.println(response);
+        server->send(200, "application/json", response);
+        Serial.println("DEBUG: /api/version/ response sent");
+    });
+
+    // Also register without trailing slash
     server->on("/api/version", HTTP_GET, [this]() {
         Serial.println("DEBUG: /api/version endpoint called!");
         String response = "{";
@@ -680,10 +694,11 @@ void NetworkManager::setupSettingsServer() {
         server->send(200, "application/json", response);
         Serial.println("DEBUG: /api/version response sent");
     });
-    Serial.println("Registered: /api/version");
+    Serial.println("Registered: /api/version and /api/version/");
 
     // Debug endpoint - trigger stock fetch and show diagnostics
-    server->on("/api/test-stock", HTTP_POST, [this]() {
+    // Register both with and without trailing slash
+    auto testStockHandler = [this]() {
         // Check authorization
         String token = server->header("Authorization");
         if (!security.validateSession(token)) {
@@ -724,7 +739,10 @@ void NetworkManager::setupSettingsServer() {
         Serial.println("=== END TEST ===\n");
 
         server->send(200, "application/json", response);
-    });
+    };
+
+    server->on("/api/test-stock", HTTP_POST, testStockHandler);
+    server->on("/api/test-stock/", HTTP_POST, testStockHandler);
 
     // Debug endpoint (no auth required) - shows crypto module config only
     server->on("/debug", [this]() {
