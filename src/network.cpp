@@ -664,6 +664,16 @@ void NetworkManager::setupSettingsServer() {
         handleStockSearch();
     });
 
+    // Version endpoint (no auth required) - check firmware version
+    server->on("/api/version", HTTP_GET, [this]() {
+        String response = "{";
+        response += "\"version\":\"v2.6.4-STOCK-FIX-DEBUG\",";
+        response += "\"build\":\"Stock Fetch Debug - Nov 12 2024\",";
+        response += "\"uptime\":" + String(millis() / 1000);
+        response += "}";
+        server->send(200, "application/json", response);
+    });
+
     // Debug endpoint - trigger stock fetch and show diagnostics
     server->on("/api/test-stock", HTTP_POST, [this]() {
         // Check authorization
