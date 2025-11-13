@@ -122,7 +122,7 @@ function loadConfig(){fetch('/api/config',{headers:{'Authorization':token}})
 window.bitcoin_config={cryptoId:d.modules.bitcoin.cryptoId||'bitcoin',cryptoSymbol:d.modules.bitcoin.cryptoSymbol||'BTC',cryptoName:d.modules.bitcoin.cryptoName||'Bitcoin'};
 window.ethereum_config={cryptoId:d.modules.ethereum.cryptoId||'ethereum',cryptoSymbol:d.modules.ethereum.cryptoSymbol||'ETH',cryptoName:d.modules.ethereum.cryptoName||'Ethereum'};
 window.stock_config={ticker:d.modules.stock.ticker||'AAPL',name:d.modules.stock.name||'Apple Inc.'};
-window.weather_config={location:d.modules.weather.location||'San Francisco',lat:d.modules.weather.latitude||37.7749,lon:d.modules.weather.longitude||-122.4194};
+window.weather_config={location:d.modules.weather.location||'San Francisco',latitude:d.modules.weather.latitude||37.7749,longitude:d.modules.weather.longitude||-122.4194};
 updateCryptoDisplay('bitcoin',d.modules.bitcoin);updateCryptoDisplay('ethereum',d.modules.ethereum);
 updateStockDisplay(d.modules.stock);updateWeatherDisplay(d.modules.weather);
 document.getElementById('customLabel').value=d.modules.custom.label||'';
@@ -191,7 +191,7 @@ html+=city.name+(city.admin1?', '+city.admin1:'')+(city.country?' ('+city.countr
 results.innerHTML=html||'<div class="search-item">No results</div>';}).catch(()=>{results.innerHTML='<div class="search-item">Error searching</div>';});},300);}
 function selectWeather(location,lat,lon,country){
 var fullLocation=location+(country?' ('+country+')':'');
-window.weather_config={location:encodeURIComponent(fullLocation),lat:parseFloat(lat),lon:parseFloat(lon)};
+window.weather_config={location:encodeURIComponent(fullLocation),latitude:parseFloat(lat),longitude:parseFloat(lon)};
 document.getElementById('weatherSearch').value='';
 setTimeout(()=>{document.getElementById('weatherResults').style.display='none';},200);
 updateWeatherDisplay({location:fullLocation,latitude:lat,longitude:lon});}
@@ -685,8 +685,8 @@ void NetworkManager::setupSettingsServer() {
     server->on("/api/version", HTTP_GET, [this]() {
         Serial.println("DEBUG: /api/version endpoint called!");
         String response = "{";
-        response += "\"version\":\"v2.6.5-YAHOO\",";
-        response += "\"build\":\"Stock Tracker with Yahoo Finance v8 - Nov 13 2024\",";
+        response += "\"version\":\"v2.6.7-WEATHER-FIX\",";
+        response += "\"build\":\"Weather Config Field Name Fix - Nov 13 2024\",";
         response += "\"uptime\":" + String(millis() / 1000);
         response += "}";
         Serial.print("DEBUG: Sending response: ");
@@ -780,6 +780,53 @@ void NetworkManager::setupSettingsServer() {
         response += "}";
 
         Serial.println("=== Force stock result ===");
+        Serial.println(response);
+
+        server->send(200, "application/json", response);
+    });
+
+    // Force weather fetch endpoint (no auth for debugging)
+    server->on("/api/force-weather", HTTP_GET, [this]() {
+        extern Scheduler scheduler;
+
+        Serial.println("\n=== /api/force-weather called ===");
+
+        // Check if weather module is registered
+        bool hasWeather = scheduler.hasModule("weather");
+        int moduleCount = scheduler.getModuleCount();
+
+        // Force a weather fetch
+        scheduler.requestFetch("weather", true);
+
+        // Wait a moment
+        delay(3000);
+
+        // Check result
+        JsonObject weather = config["modules"]["weather"];
+        unsigned long lastUpdate = weather["lastUpdate"] | 0;
+        float temp = weather["temperature"] | 0.0;
+        String condition = weather["condition"] | "Unknown";
+        String location = weather["location"] | "Unknown";
+        float latitude = weather["latitude"] | 0.0;
+        float longitude = weather["longitude"] | 0.0;
+        bool success = weather["lastSuccess"] | false;
+        String error = weather["lastError"] | "";
+
+        String response = "{";
+        response += "\"triggered\":true,";
+        response += "\"moduleCount\":" + String(moduleCount) + ",";
+        response += "\"hasWeather\":" + String(hasWeather ? "true" : "false") + ",";
+        response += "\"location\":\"" + location + "\",";
+        response += "\"latitude\":" + String(latitude, 4) + ",";
+        response += "\"longitude\":" + String(longitude, 4) + ",";
+        response += "\"lastUpdate\":" + String(lastUpdate) + ",";
+        response += "\"temperature\":" + String(temp, 1) + ",";
+        response += "\"condition\":\"" + condition + "\",";
+        response += "\"lastSuccess\":" + String(success ? "true" : "false") + ",";
+        response += "\"lastError\":\"" + error + "\"";
+        response += "}";
+
+        Serial.println("=== Force weather result ===");
         Serial.println(response);
 
         server->send(200, "application/json", response);
