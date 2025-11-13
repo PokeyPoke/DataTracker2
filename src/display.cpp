@@ -135,8 +135,8 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
     // Change percentage
     u8g2.setFont(u8g2_font_helvB08_tr);
     char changeStr[20];
-    const char* arrow = (change24h >= 0) ? "^" : "v";
-    snprintf(changeStr, sizeof(changeStr), "%s %.1f%% (24h)", arrow, fabs(change24h));
+    const char* sign = (change24h >= 0) ? "+" : "-";
+    snprintf(changeStr, sizeof(changeStr), "%s%.1f%% (24h)", sign, fabs(change24h));
     int changeWidth = u8g2.getStrWidth(changeStr);
     u8g2.drawStr((128 - changeWidth) / 2, 50, changeStr);
 
@@ -170,8 +170,8 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
     // Change percentage
     u8g2.setFont(u8g2_font_helvB08_tr);
     char changeStr[20];
-    const char* arrow = (change24h >= 0) ? "^" : "v";
-    snprintf(changeStr, sizeof(changeStr), "%s %.1f%% (24h)", arrow, fabs(change24h));
+    const char* sign = (change24h >= 0) ? "+" : "-";
+    snprintf(changeStr, sizeof(changeStr), "%s%.1f%% (24h)", sign, fabs(change24h));
     int changeWidth = u8g2.getStrWidth(changeStr);
     u8g2.drawStr((128 - changeWidth) / 2, 50, changeStr);
 
@@ -196,8 +196,8 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
     // Change percentage
     u8g2.setFont(u8g2_font_helvB08_tr);
     char changeStr[20];
-    const char* arrow = (change >= 0) ? "^" : "v";
-    snprintf(changeStr, sizeof(changeStr), "%s %.1f%% (today)", arrow, fabs(change));
+    const char* sign = (change >= 0) ? "+" : "-";
+    snprintf(changeStr, sizeof(changeStr), "%s%.1f%% (today)", sign, fabs(change));
     int changeWidth = u8g2.getStrWidth(changeStr);
     u8g2.drawStr((128 - changeWidth) / 2, 50, changeStr);
 
@@ -220,12 +220,12 @@ void DisplayManager::showWeather(float temp, const char* condition, const char* 
 
     u8g2.setFont(u8g2_font_logisoso24_tn);
     int tempWidth = u8g2.getStrWidth(tempStr);
-    u8g2.drawStr((128 - tempWidth - 20) / 2, 35, tempStr);
+    u8g2.drawStr((128 - tempWidth - 24) / 2, 35, tempStr);
 
-    // Degree symbol and C
+    // Degree symbol and C (add more spacing to prevent overlap)
     u8g2.setFont(u8g2_font_helvB10_tr);
-    u8g2.drawStr((128 - tempWidth - 20) / 2 + tempWidth, 35, "C");
-    u8g2.drawCircle((128 - tempWidth - 20) / 2 + tempWidth - 3, 18, 2);
+    u8g2.drawStr((128 - tempWidth - 24) / 2 + tempWidth + 6, 35, "C");
+    u8g2.drawCircle((128 - tempWidth - 24) / 2 + tempWidth + 2, 18, 2);
 
     // Condition
     u8g2.setFont(u8g2_font_helvB08_tr);

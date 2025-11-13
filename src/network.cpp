@@ -690,8 +690,8 @@ void NetworkManager::setupSettingsServer() {
     server->on("/api/version", HTTP_GET, [this]() {
         Serial.println("DEBUG: /api/version endpoint called!");
         String response = "{";
-        response += "\"version\":\"v2.6.12-DISPLAY-FIX\",";
-        response += "\"build\":\"Remove Accents for Display - Nov 13 2024\",";
+        response += "\"version\":\"v2.6.13-DISPLAY-POLISH\",";
+        response += "\"build\":\"Display Polish - Nov 13 2024\",";
         response += "\"uptime\":" + String(millis() / 1000);
         response += "}";
         Serial.print("DEBUG: Sending response: ");
