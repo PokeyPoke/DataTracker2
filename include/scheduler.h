@@ -47,6 +47,8 @@ public:
 
     SchedulerState getState() { return context.state; }
     String getCurrentModule() { return context.currentModule; }
+    int getModuleCount() { return modules.size(); }
+    bool hasModule(const char* moduleId) { return modules.find(String(moduleId)) != modules.end(); }
 };
 
 #endif // SCHEDULER_H

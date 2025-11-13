@@ -750,6 +750,11 @@ void NetworkManager::setupSettingsServer() {
 
         Serial.println("\n=== /api/force-stock called ===");
 
+        // Check if stock module is registered
+        bool hasStock = scheduler.hasModule("stock");
+        bool hasBitcoin = scheduler.hasModule("bitcoin");
+        int moduleCount = scheduler.getModuleCount();
+
         // Force a stock fetch
         scheduler.requestFetch("stock", true);
 
@@ -764,6 +769,9 @@ void NetworkManager::setupSettingsServer() {
 
         String response = "{";
         response += "\"triggered\":true,";
+        response += "\"moduleCount\":" + String(moduleCount) + ",";
+        response += "\"hasStock\":" + String(hasStock ? "true" : "false") + ",";
+        response += "\"hasBitcoin\":" + String(hasBitcoin ? "true" : "false") + ",";
         response += "\"lastUpdate\":" + String(lastUpdate) + ",";
         response += "\"value\":" + String(value) + ",";
         response += "\"lastSuccess\":" + String(success ? "true" : "false");
