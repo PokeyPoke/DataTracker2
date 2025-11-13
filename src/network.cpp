@@ -744,6 +744,26 @@ void NetworkManager::setupSettingsServer() {
     server->on("/api/test-stock", HTTP_POST, testStockHandler);
     server->on("/api/test-stock/", HTTP_POST, testStockHandler);
 
+    // Status endpoint - check if scheduler is working
+    server->on("/api/status", HTTP_GET, [this]() {
+        extern Scheduler scheduler;
+
+        JsonObject stock = config["modules"]["stock"];
+        unsigned long lastUpdate = stock["lastUpdate"] | 0;
+        unsigned long now = millis() / 1000;
+        unsigned long timeSinceUpdate = now - lastUpdate;
+
+        String response = "{";
+        response += "\"stock_lastUpdate\":" + String(lastUpdate) + ",";
+        response += "\"stock_value\":" + String(stock["value"] | 0.0) + ",";
+        response += "\"stock_lastSuccess\":" + String(stock["lastSuccess"] | false ? "true" : "false") + ",";
+        response += "\"current_time\":" + String(now) + ",";
+        response += "\"time_since_last_update\":" + String(timeSinceUpdate) + ",";
+        response += "\"device_uptime\":" + String(now) + "";
+        response += "}";
+        server->send(200, "application/json", response);
+    });
+
     // Debug endpoint (no auth required) - shows crypto module config only
     server->on("/debug", [this]() {
         String html = "<!DOCTYPE html><html><head><title>Debug Config</title>";
