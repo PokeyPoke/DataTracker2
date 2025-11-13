@@ -194,11 +194,12 @@ html+='<div class="search-item" onclick="selectWeather(\''+city.name.replace(/'/
 html+=city.name+(city.admin1?', '+city.admin1:'')+(city.country?' ('+city.country+')':'')+'</div>';});}
 results.innerHTML=html||'<div class="search-item">No results</div>';}).catch(()=>{results.innerHTML='<div class="search-item">Error searching</div>';});},300);}
 function selectWeather(location,lat,lon,country){
-window.weather_config={location:location,latitude:parseFloat(lat),longitude:parseFloat(lon)};
+var cleanLocation=location.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+window.weather_config={location:cleanLocation,latitude:parseFloat(lat),longitude:parseFloat(lon)};
 console.log('Selected weather:',window.weather_config);
 document.getElementById('weatherSearch').value='';
 setTimeout(()=>{document.getElementById('weatherResults').style.display='none';},200);
-updateWeatherDisplay({location:location,latitude:lat,longitude:lon});}
+updateWeatherDisplay({location:cleanLocation,latitude:lat,longitude:lon});}
 function saveSettings(){var cfg={device:{activeModule:document.getElementById('activeModule').value},
 modules:{bitcoin:window.bitcoin_config||{},ethereum:window.ethereum_config||{},
 stock:window.stock_config||{ticker:'AAPL'},
@@ -689,8 +690,8 @@ void NetworkManager::setupSettingsServer() {
     server->on("/api/version", HTTP_GET, [this]() {
         Serial.println("DEBUG: /api/version endpoint called!");
         String response = "{";
-        response += "\"version\":\"v2.6.11-WEATHER-FIXED\",";
-        response += "\"build\":\"Weather Module FINAL FIX - Nov 13 2024\",";
+        response += "\"version\":\"v2.6.12-DISPLAY-FIX\",";
+        response += "\"build\":\"Remove Accents for Display - Nov 13 2024\",";
         response += "\"uptime\":" + String(millis() / 1000);
         response += "}";
         Serial.print("DEBUG: Sending response: ");
