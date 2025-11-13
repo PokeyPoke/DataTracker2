@@ -50,8 +50,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.13-DISPLAY-POLISH ===");
-    Serial.println("Build: Display Polish - Nov 13 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.14-MODULE-ORDER ===");
+    Serial.println("Build: Settings Module to End - Nov 13 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -289,8 +289,8 @@ void handleButtonEvent(ButtonEvent event) {
 }
 
 void cycleToNextModule() {
-    // Available modules (settings moved to 2nd position for easier access)
-    const char* modules[] = {"bitcoin", "settings", "ethereum", "stock", "weather", "custom"};
+    // Available modules (settings at the end)
+    const char* modules[] = {"bitcoin", "ethereum", "stock", "weather", "custom", "settings"};
     const int moduleCount = 6;
 
     Serial.print("DEBUG: Total modules available: ");
