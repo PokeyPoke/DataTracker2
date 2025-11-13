@@ -15,48 +15,56 @@ public:
     }
 
     bool fetch(String& errorMsg) override {
-        Serial.println("\n*** StockModule::fetch() CALLED ***");
+        Serial.println("\n*** StockModule::fetch() CALLED - START ***");
 
-        // Get ticker from config
-        JsonObject stockData = config["modules"]["stock"];
-        String ticker = stockData["ticker"] | "AAPL";
+        try {
+            // Get ticker from config
+            Serial.println("Stock: Getting config data...");
+            JsonObject stockData = config["modules"]["stock"];
+            String ticker = stockData["ticker"] | "AAPL";
 
-        Serial.print("Stock: Fetching price for ");
-        Serial.println(ticker);
-        Serial.print("Stock: Ticker from config: '");
-        Serial.print(ticker);
-        Serial.println("'");
+            Serial.print("Stock: Fetching price for ");
+            Serial.println(ticker);
 
-        if (ticker.length() == 0) {
-            errorMsg = "Ticker is empty";
-            Serial.println("Stock: ERROR - ticker is empty");
+            if (ticker.length() == 0) {
+                errorMsg = "Ticker is empty";
+                Serial.println("Stock: ERROR - ticker is empty");
+                Serial.println("*** StockModule::fetch() RETURNING FALSE ***");
+                return false;
+            }
+
+            // Use free Finnhub API
+            String url = "https://finnhub.io/api/v1/quote?symbol=" + ticker;
+            Serial.print("Stock: URL = ");
+            Serial.println(url);
+
+            String response;
+            Serial.println("Stock: Calling network.httpGet()...");
+            if (!network.httpGet(url.c_str(), response, errorMsg)) {
+                Serial.print("Stock: HTTP request failed - ");
+                Serial.println(errorMsg);
+                Serial.println("*** StockModule::fetch() RETURNING FALSE (HTTP FAILED) ***");
+                return false;
+            }
+
+            Serial.print("Stock: Response length = ");
+            Serial.println(response.length());
+            Serial.print("Stock: Calling parseResponse()...");
+            bool success = parseResponse(response, errorMsg);
+            if (!success) {
+                Serial.print("Stock: Parse failed - ");
+                Serial.println(errorMsg);
+                Serial.println("*** StockModule::fetch() RETURNING FALSE (PARSE FAILED) ***");
+            } else {
+                Serial.println("Stock: Parse successful");
+                Serial.println("*** StockModule::fetch() RETURNING TRUE ***");
+            }
+            return success;
+        } catch (...) {
+            Serial.println("*** StockModule::fetch() CAUGHT EXCEPTION ***");
+            errorMsg = "Exception in fetch";
             return false;
         }
-
-        // Use free Finnhub API (no authentication required for free tier)
-        // Finnhub provides stock quotes without requiring API key for basic requests
-        String url = "https://finnhub.io/api/v1/quote?symbol=" + ticker;
-        Serial.print("Stock: URL = ");
-        Serial.println(url);
-
-        String response;
-        if (!network.httpGet(url.c_str(), response, errorMsg)) {
-            Serial.print("Stock: HTTP request failed - ");
-            Serial.println(errorMsg);
-            return false;
-        }
-
-        Serial.print("Stock: Response length = ");
-        Serial.println(response.length());
-        Serial.print("Stock: Response received, parsing... ");
-        bool success = parseResponse(response, errorMsg);
-        if (!success) {
-            Serial.print("Stock: Parse failed - ");
-            Serial.println(errorMsg);
-        } else {
-            Serial.println("Stock: Parse successful");
-        }
-        return success;
     }
 
     bool parseResponse(String payload, String& errorMsg) {
