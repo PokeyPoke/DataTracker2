@@ -116,6 +116,12 @@ void setup() {
 
             Serial.println("All modules registered");
 
+            // TEMPORARY DEBUG: Always fetch stock at startup to verify it works
+            Serial.println("\n*** TEMPORARY DEBUG: Force-fetching STOCK module at startup ***");
+            scheduler.requestFetch("stock", true);
+            delay(2000);
+            Serial.println("*** DEBUG: Check if stock lastUpdate changed ***\n");
+
             // Force initial fetch of active module
             String activeModule = config["device"]["activeModule"] | "bitcoin";
             Serial.print("Active module: ");
