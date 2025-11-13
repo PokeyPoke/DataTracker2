@@ -50,8 +50,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.4-FINNHUB ===");
-    Serial.println("Build: Stock Tracker with Finnhub API - Nov 12 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.5-YAHOO ===");
+    Serial.println("Build: Stock Tracker with Yahoo Finance v8 - Nov 13 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage

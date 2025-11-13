@@ -685,8 +685,8 @@ void NetworkManager::setupSettingsServer() {
     server->on("/api/version", HTTP_GET, [this]() {
         Serial.println("DEBUG: /api/version endpoint called!");
         String response = "{";
-        response += "\"version\":\"v2.6.4-FINNHUB\",";
-        response += "\"build\":\"Stock Tracker with Finnhub API - Nov 12 2024\",";
+        response += "\"version\":\"v2.6.5-YAHOO\",";
+        response += "\"build\":\"Stock Tracker with Yahoo Finance v8 - Nov 13 2024\",";
         response += "\"uptime\":" + String(millis() / 1000);
         response += "}";
         Serial.print("DEBUG: Sending response: ");

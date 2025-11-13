@@ -33,9 +33,8 @@ public:
             return false;
         }
 
-        // Use free Finnhub API (no authentication required for free tier)
-        // Finnhub provides stock quotes without requiring API key for basic requests
-        String url = "https://finnhub.io/api/v1/quote?symbol=" + ticker;
+        // Use Yahoo Finance v8 query API (free, no auth required)
+        String url = "https://query1.finance.yahoo.com/v8/finance/chart/" + ticker + "?interval=1d&range=1d";
         Serial.print("Stock: URL = ");
         Serial.println(url);
 
@@ -85,17 +84,45 @@ public:
 
         Serial.println("Stock: JSON parsed successfully");
 
-        // Finnhub response format: {"c": 150.25, "d": 1.50, "dp": 1.01, ...}
-        // c = current price, d = change in absolute value, dp = change percent
+        // Yahoo Finance v8 response format:
+        // chart.result[0].meta.regularMarketPrice = current price
+        // chart.result[0].meta.chartPreviousClose = previous close
 
-        if (!doc.containsKey("c")) {
-            errorMsg = "Missing price data";
-            Serial.println("Stock: ERROR - Missing 'c' (price) in response");
+        if (!doc.containsKey("chart")) {
+            errorMsg = "Missing chart data";
+            Serial.println("Stock: ERROR - Missing 'chart' in response");
             return false;
         }
 
-        float price = doc["c"] | 0.0;
-        float changePercent = doc["dp"] | 0.0;  // dp is the percentage change
+        JsonObject chart = doc["chart"];
+        if (!chart.containsKey("result") || chart["result"].size() == 0) {
+            errorMsg = "Missing result data";
+            Serial.println("Stock: ERROR - Missing 'result' array in chart");
+            return false;
+        }
+
+        JsonObject result = chart["result"][0];
+        if (!result.containsKey("meta")) {
+            errorMsg = "Missing meta data";
+            Serial.println("Stock: ERROR - Missing 'meta' in result");
+            return false;
+        }
+
+        JsonObject meta = result["meta"];
+        if (!meta.containsKey("regularMarketPrice")) {
+            errorMsg = "Missing regularMarketPrice";
+            Serial.println("Stock: ERROR - Missing 'regularMarketPrice' in meta");
+            return false;
+        }
+
+        float price = meta["regularMarketPrice"] | 0.0;
+        float previousClose = meta["chartPreviousClose"] | price;  // fallback to current if missing
+
+        // Calculate percentage change
+        float changePercent = 0.0;
+        if (previousClose > 0) {
+            changePercent = ((price - previousClose) / previousClose) * 100.0;
+        }
 
         // Get ticker from config to use as symbol
         String ticker = config["modules"]["stock"]["ticker"] | "AAPL";
