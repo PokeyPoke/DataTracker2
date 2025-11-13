@@ -748,18 +748,23 @@ void NetworkManager::setupSettingsServer() {
     server->on("/api/status", HTTP_GET, [this]() {
         extern Scheduler scheduler;
 
-        JsonObject stock = config["modules"]["stock"];
-        unsigned long lastUpdate = stock["lastUpdate"] | 0;
         unsigned long now = millis() / 1000;
-        unsigned long timeSinceUpdate = now - lastUpdate;
+
+        JsonObject stock = config["modules"]["stock"];
+        JsonObject bitcoin = config["modules"]["bitcoin"];
+        unsigned long stockLastUpdate = stock["lastUpdate"] | 0;
+        unsigned long btcLastUpdate = bitcoin["lastUpdate"] | 0;
 
         String response = "{";
-        response += "\"stock_lastUpdate\":" + String(lastUpdate) + ",";
+        response += "\"stock_lastUpdate\":" + String(stockLastUpdate) + ",";
         response += "\"stock_value\":" + String(stock["value"] | 0.0) + ",";
         response += "\"stock_lastSuccess\":" + String(stock["lastSuccess"] | false ? "true" : "false") + ",";
+        response += "\"bitcoin_lastUpdate\":" + String(btcLastUpdate) + ",";
+        response += "\"bitcoin_value\":" + String(bitcoin["value"] | 0.0) + ",";
+        response += "\"bitcoin_lastSuccess\":" + String(bitcoin["lastSuccess"] | false ? "true" : "false") + ",";
         response += "\"current_time\":" + String(now) + ",";
-        response += "\"time_since_last_update\":" + String(timeSinceUpdate) + ",";
-        response += "\"device_uptime\":" + String(now) + "";
+        response += "\"stock_time_since_update\":" + String(now - stockLastUpdate) + ",";
+        response += "\"bitcoin_time_since_update\":" + String(now - btcLastUpdate) + "";
         response += "}";
         server->send(200, "application/json", response);
     });
