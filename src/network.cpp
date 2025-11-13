@@ -9,6 +9,10 @@
 extern SecurityManager security;
 extern Scheduler scheduler;
 
+// Debug: Store last POST body and save result for debugging
+String lastPostBody = "";
+String lastSaveResult = "No save yet";
+
 // Animal names for unique device identification (64 names)
 const char* ANIMAL_NAMES[] = {
     "Panda", "Tiger", "Lion", "Bear",
@@ -685,8 +689,8 @@ void NetworkManager::setupSettingsServer() {
     server->on("/api/version", HTTP_GET, [this]() {
         Serial.println("DEBUG: /api/version endpoint called!");
         String response = "{";
-        response += "\"version\":\"v2.6.9-WEATHER-FINAL\",";
-        response += "\"build\":\"Weather Config Save Fix - Nov 13 2024\",";
+        response += "\"version\":\"v2.6.11-WEATHER-FIXED\",";
+        response += "\"build\":\"Weather Module FINAL FIX - Nov 13 2024\",";
         response += "\"uptime\":" + String(millis() / 1000);
         response += "}";
         Serial.print("DEBUG: Sending response: ");
@@ -832,22 +836,69 @@ void NetworkManager::setupSettingsServer() {
         server->send(200, "application/json", response);
     });
 
+    // Debug endpoint to show last save processing
+    server->on("/api/debug-save", HTTP_GET, [this]() {
+        server->send(200, "text/plain", lastSaveResult);
+    });
+
     // Debug endpoint for weather config (no auth for debugging)
     server->on("/api/weather-config", HTTP_GET, [this]() {
         JsonObject weather = config["modules"]["weather"];
 
-        String response = "{";
-        response += "\"location\":\"" + String(weather["location"] | "NOT SET") + "\",";
-        response += "\"latitude\":" + String(weather["latitude"] | 0.0, 6) + ",";
-        response += "\"longitude\":" + String(weather["longitude"] | 0.0, 6) + ",";
-        response += "\"temperature\":" + String(weather["temperature"] | 0.0, 1) + ",";
-        response += "\"condition\":\"" + String(weather["condition"] | "Unknown") + "\",";
-        response += "\"lastUpdate\":" + String(weather["lastUpdate"] | 0) + ",";
-        response += "\"lastSuccess\":" + String(weather["lastSuccess"] | false ? "true" : "false");
-        response += "}";
+        String response = "Weather config in memory:\n\n";
+        response += "location: " + String(weather["location"] | "NOT SET") + "\n";
+        response += "latitude: " + String(weather["latitude"] | 0.0, 6) + "\n";
+        response += "longitude: " + String(weather["longitude"] | 0.0, 6) + "\n";
+        response += "temperature: " + String(weather["temperature"] | 0.0, 1) + "\n";
+        response += "condition: " + String(weather["condition"] | "Unknown") + "\n";
+        response += "lastUpdate: " + String(weather["lastUpdate"] | 0) + "\n";
+        response += "lastSuccess: " + String(weather["lastSuccess"] | false ? "true" : "false") + "\n";
 
-        server->send(200, "application/json", response);
+        // Also check what fields actually exist
+        response += "\nField existence check:\n";
+        response += "  location exists: " + String(weather.containsKey("location") ? "yes" : "no") + "\n";
+        response += "  latitude exists: " + String(weather.containsKey("latitude") ? "yes" : "no") + "\n";
+        response += "  longitude exists: " + String(weather.containsKey("longitude") ? "yes" : "no") + "\n";
+
+        server->send(200, "text/plain", response);
     });
+
+    // Debug endpoint to show last POST body (no auth for debugging)
+    auto debugLastPostHandler = [this]() {
+        // Parse the body to check for overflow
+        StaticJsonDocument<2048> testDoc;
+        DeserializationError err = deserializeJson(testDoc, lastPostBody);
+
+        String response = "Last POST body (length=" + String(lastPostBody.length()) + "):\n\n";
+        response += lastPostBody;
+        response += "\n\n--- Parse Test ---\n";
+        if (err) {
+            response += "Parse ERROR: " + String(err.c_str()) + "\n";
+        } else {
+            response += "Parse OK\n";
+            response += "Memory: " + String(testDoc.memoryUsage()) + " / " + String(testDoc.capacity()) + " bytes\n";
+            response += "Overflowed: " + String(testDoc.overflowed() ? "YES - DATA LOST!" : "No") + "\n";
+
+            // Check if weather fields exist
+            if (testDoc.containsKey("modules") && testDoc["modules"].containsKey("weather")) {
+                JsonObject weather = testDoc["modules"]["weather"];
+                response += "\nWeather in parsed doc:\n";
+                response += "  location exists: " + String(weather.containsKey("location") ? "yes" : "no") + "\n";
+                response += "  latitude exists: " + String(weather.containsKey("latitude") ? "yes" : "no") + "\n";
+                response += "  longitude exists: " + String(weather.containsKey("longitude") ? "yes" : "no") + "\n";
+                if (weather.containsKey("latitude")) {
+                    response += "  latitude value: " + String(weather["latitude"].as<float>(), 6) + "\n";
+                }
+                if (weather.containsKey("longitude")) {
+                    response += "  longitude value: " + String(weather["longitude"].as<float>(), 6) + "\n";
+                }
+            }
+        }
+
+        server->send(200, "text/plain", response);
+    };
+    server->on("/api/debug-last-post", HTTP_GET, debugLastPostHandler);
+    server->on("/api/debug-last-post/", HTTP_GET, debugLastPostHandler);
 
     // Status endpoint - check if scheduler is working
     server->on("/api/status", HTTP_GET, [this]() {
@@ -1013,6 +1064,15 @@ void NetworkManager::handleUpdateConfig() {
     }
 
     String body = server->arg("plain");
+    lastPostBody = body;  // Store for debug endpoint
+
+    Serial.println("\n=== RECEIVED CONFIG UPDATE ===");
+    Serial.print("Body length: ");
+    Serial.println(body.length());
+    Serial.println("Body content:");
+    Serial.println(body);
+    Serial.println("==============================\n");
+
     StaticJsonDocument<2048> doc;
     DeserializationError error = deserializeJson(doc, body);
 
@@ -1021,6 +1081,18 @@ void NetworkManager::handleUpdateConfig() {
         errorMsg += error.c_str();
         errorMsg += "\"}";
         server->send(400, "application/json", errorMsg);
+        return;
+    }
+
+    // Check if document overflowed
+    Serial.print("JSON parse successful. Memory usage: ");
+    Serial.print(doc.memoryUsage());
+    Serial.print(" / ");
+    Serial.print(doc.capacity());
+    Serial.println(" bytes");
+    if (doc.overflowed()) {
+        Serial.println("ERROR: JSON document OVERFLOWED! Data may be lost!");
+        server->send(400, "application/json", "{\"success\":false,\"error\":\"Config too large\"}");
         return;
     }
 
@@ -1123,6 +1195,14 @@ void NetworkManager::handleUpdateConfig() {
         if (modules.containsKey("weather")) {
             Serial.println("=== Processing weather config update ===");
 
+            // Debug: Check what fields exist in the incoming weather object
+            JsonObject incomingWeather = modules["weather"];
+            lastSaveResult = "Weather object has " + String(incomingWeather.size()) + " fields:\n";
+            for (JsonPair kv : incomingWeather) {
+                lastSaveResult += "  " + String(kv.key().c_str()) + " = " + kv.value().as<String>() + "\n";
+            }
+            Serial.print(lastSaveResult);
+
             if (modules["weather"].containsKey("location")) {
                 String location = modules["weather"]["location"].as<String>();
                 config["modules"]["weather"]["location"] = location;
@@ -1132,18 +1212,52 @@ void NetworkManager::handleUpdateConfig() {
 
             if (modules["weather"].containsKey("latitude")) {
                 float lat = modules["weather"]["latitude"].as<float>();
+
+                // Check config memory BEFORE assignment
+                size_t memBefore = config.memoryUsage();
+
                 config["modules"]["weather"]["latitude"] = lat;
+
+                // Check if assignment worked
+                size_t memAfter = config.memoryUsage();
+                bool overflowed = config.overflowed();
+
+                lastSaveResult += "Latitude assignment: before=" + String(memBefore) + ", after=" + String(memAfter) + ", overflowed=" + String(overflowed ? "YES" : "no") + "\n";
+
                 Serial.print("Weather latitude set to: ");
                 Serial.println(lat, 6);
+                Serial.print("Config memory: ");
+                Serial.print(memAfter);
+                Serial.print(" / ");
+                Serial.print(config.capacity());
+                Serial.print(", overflowed: ");
+                Serial.println(overflowed ? "YES!" : "no");
             } else {
                 Serial.println("WARNING: No latitude in request!");
             }
 
             if (modules["weather"].containsKey("longitude")) {
                 float lon = modules["weather"]["longitude"].as<float>();
+
+                // Check config memory BEFORE assignment
+                size_t memBefore = config.memoryUsage();
+
                 config["modules"]["weather"]["longitude"] = lon;
+
+                // Check if assignment worked
+                size_t memAfter = config.memoryUsage();
+                bool overflowed = config.overflowed();
+
+                lastSaveResult += "Longitude assignment: before=" + String(memBefore) + ", after=" + String(memAfter) + ", overflowed=" + String(overflowed ? "YES" : "no") + "\n";
+
                 Serial.print("Weather longitude set to: ");
                 Serial.println(lon, 6);
+                Serial.print("Config memory: ");
+                Serial.print(memAfter);
+                Serial.print(" / ");
+                Serial.print(config.capacity());
+                Serial.print(", overflowed: ");
+                Serial.println(overflowed ? "YES!" : "no");
             } else {
                 Serial.println("WARNING: No longitude in request!");
             }
@@ -1155,6 +1269,26 @@ void NetworkManager::handleUpdateConfig() {
             config["modules"]["weather"]["lastSuccess"] = false;
 
             Serial.println("Weather cache cleared, will fetch on next cycle");
+
+            // Verify what's actually in config now
+            Serial.println("=== VERIFICATION: What's in config after update ===");
+            JsonObject verifyWeather = config["modules"]["weather"];
+
+            lastSaveResult += "\nVERIFICATION after assignments:\n";
+            lastSaveResult += "  location: " + String(verifyWeather["location"] | "MISSING") + "\n";
+            lastSaveResult += "  latitude: " + String(verifyWeather["latitude"] | 0.0, 6) + "\n";
+            lastSaveResult += "  longitude: " + String(verifyWeather["longitude"] | 0.0, 6) + "\n";
+            lastSaveResult += "  location exists: " + String(verifyWeather.containsKey("location") ? "yes" : "NO") + "\n";
+            lastSaveResult += "  latitude exists: " + String(verifyWeather.containsKey("latitude") ? "yes" : "NO") + "\n";
+            lastSaveResult += "  longitude exists: " + String(verifyWeather.containsKey("longitude") ? "yes" : "NO") + "\n";
+
+            Serial.print("  location: ");
+            Serial.println(verifyWeather["location"] | "MISSING");
+            Serial.print("  latitude: ");
+            Serial.println(verifyWeather["latitude"] | 0.0, 6);
+            Serial.print("  longitude: ");
+            Serial.println(verifyWeather["longitude"] | 0.0, 6);
+            Serial.println("===================================================");
         }
 
         // Update custom config

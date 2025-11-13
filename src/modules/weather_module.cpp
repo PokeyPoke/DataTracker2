@@ -109,8 +109,8 @@ public:
         Serial.print(getWeatherCondition(weatherCode));
         Serial.println(")");
 
-        // Update cache
-        JsonObject data = config["modules"]["weather"].to<JsonObject>();
+        // Update cache (use reference, NOT .to<JsonObject>() which clears everything!)
+        JsonObject data = config["modules"]["weather"];
         data["temperature"] = temp;
         data["condition"] = getWeatherCondition(weatherCode);
         data["lastUpdate"] = millis() / 1000;
