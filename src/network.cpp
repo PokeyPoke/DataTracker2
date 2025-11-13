@@ -685,8 +685,8 @@ void NetworkManager::setupSettingsServer() {
     server->on("/api/version", HTTP_GET, [this]() {
         Serial.println("DEBUG: /api/version endpoint called!");
         String response = "{";
-        response += "\"version\":\"v2.6.8-WEATHER-DEBUG\",";
-        response += "\"build\":\"Weather Debug with Logging - Nov 13 2024\",";
+        response += "\"version\":\"v2.6.9-WEATHER-FINAL\",";
+        response += "\"build\":\"Weather Config Save Fix - Nov 13 2024\",";
         response += "\"uptime\":" + String(millis() / 1000);
         response += "}";
         Serial.print("DEBUG: Sending response: ");
@@ -828,6 +828,23 @@ void NetworkManager::setupSettingsServer() {
 
         Serial.println("=== Force weather result ===");
         Serial.println(response);
+
+        server->send(200, "application/json", response);
+    });
+
+    // Debug endpoint for weather config (no auth for debugging)
+    server->on("/api/weather-config", HTTP_GET, [this]() {
+        JsonObject weather = config["modules"]["weather"];
+
+        String response = "{";
+        response += "\"location\":\"" + String(weather["location"] | "NOT SET") + "\",";
+        response += "\"latitude\":" + String(weather["latitude"] | 0.0, 6) + ",";
+        response += "\"longitude\":" + String(weather["longitude"] | 0.0, 6) + ",";
+        response += "\"temperature\":" + String(weather["temperature"] | 0.0, 1) + ",";
+        response += "\"condition\":\"" + String(weather["condition"] | "Unknown") + "\",";
+        response += "\"lastUpdate\":" + String(weather["lastUpdate"] | 0) + ",";
+        response += "\"lastSuccess\":" + String(weather["lastSuccess"] | false ? "true" : "false");
+        response += "}";
 
         server->send(200, "application/json", response);
     });
@@ -1154,12 +1171,10 @@ void NetworkManager::handleUpdateConfig() {
         }
     }
 
-    // Save to file FIRST before triggering fetches (force=true to bypass throttle)
+    // Save to file (force=true to bypass throttle)
+    // Note: We do NOT reload after save - config is already in memory!
+    // Reloading could trigger setDefaultConfig() if validation fails, wiping user data!
     saveConfiguration(true);
-
-    // Reload config to ensure everything is fresh in memory
-    Serial.println("Reloading configuration after save...");
-    loadConfiguration();
 
     // Trigger forced fetches for modules that changed
     if (doc.containsKey("modules")) {
