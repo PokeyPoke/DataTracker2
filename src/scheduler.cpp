@@ -143,13 +143,27 @@ void Scheduler::executeFetch() {
     }
 
     ModuleInterface* module = modules[context.currentModule];
-    Serial.print("Module found, calling fetch()...");
+    Serial.print("Module found at address: ");
+    Serial.println((unsigned long)module, HEX);
+    Serial.print("Module ID: ");
+    Serial.println(module->id);
 
     String errorMsg;
-    Serial.println("About to call module->fetch()");
-    bool success = module->fetch(errorMsg);
+    Serial.println("About to call module->fetch()...");
+    bool success = false;
+
+    if (context.currentModule == "stock") {
+        Serial.println("DEBUG: Calling StockModule fetch specifically");
+    }
+
+    success = module->fetch(errorMsg);
+
     Serial.print("module->fetch() returned: ");
     Serial.println(success ? "true" : "false");
+    if (!success) {
+        Serial.print("Error message: ");
+        Serial.println(errorMsg);
+    }
 
     unsigned long now = millis() / 1000;
     context.lastFetchTime = now;

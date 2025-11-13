@@ -107,12 +107,24 @@ void setup() {
 
             Serial.println("Registering modules...");
             scheduler.registerModule(new BitcoinModule());
+            Serial.println("  ✓ BitcoinModule registered");
             scheduler.registerModule(new EthereumModule());
-            scheduler.registerModule(new StockModule());
-            Serial.println("DEBUG: StockModule registered");
+            Serial.println("  ✓ EthereumModule registered");
+
+            Serial.println("  Creating StockModule...");
+            StockModule* stockMod = new StockModule();
+            Serial.print("    StockModule created, id='");
+            Serial.print(stockMod->id);
+            Serial.println("'");
+            scheduler.registerModule(stockMod);
+            Serial.println("  ✓ StockModule registered");
+
             scheduler.registerModule(new WeatherModule());
+            Serial.println("  ✓ WeatherModule registered");
             scheduler.registerModule(new CustomModule());
+            Serial.println("  ✓ CustomModule registered");
             scheduler.registerModule(new SettingsModule());
+            Serial.println("  ✓ SettingsModule registered");
 
             Serial.println("All modules registered");
 
