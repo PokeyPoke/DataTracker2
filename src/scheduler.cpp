@@ -80,12 +80,23 @@ void Scheduler::requestFetch(const char* moduleId, bool forced) {
     Serial.print(" forced=");
     Serial.println(forced);
 
+    // Debug: print all registered modules
+    Serial.print("DEBUG: Total modules in map: ");
+    Serial.println(modules.size());
+    Serial.println("DEBUG: Registered modules:");
+    for (auto& pair : modules) {
+        Serial.print("  - ");
+        Serial.println(pair.first);
+    }
+
     // Check if module exists
     if (modules.find(String(moduleId)) == modules.end()) {
-        Serial.print("ERROR: Module not found: ");
+        Serial.print("ERROR: Module not found in map: ");
         Serial.println(moduleId);
+        Serial.println("Module lookup FAILED!");
         return;
     }
+    Serial.println("Module found in map!");
 
     ModuleInterface* module = modules[String(moduleId)];
 
