@@ -766,6 +766,7 @@ void NetworkManager::setupSettingsServer() {
         unsigned long lastUpdate = stock["lastUpdate"] | 0;
         float value = stock["value"] | 0.0;
         bool success = stock["lastSuccess"] | false;
+        String error = stock["lastError"] | "";
 
         String response = "{";
         response += "\"triggered\":true,";
@@ -774,7 +775,8 @@ void NetworkManager::setupSettingsServer() {
         response += "\"hasBitcoin\":" + String(hasBitcoin ? "true" : "false") + ",";
         response += "\"lastUpdate\":" + String(lastUpdate) + ",";
         response += "\"value\":" + String(value) + ",";
-        response += "\"lastSuccess\":" + String(success ? "true" : "false");
+        response += "\"lastSuccess\":" + String(success ? "true" : "false") + ",";
+        response += "\"lastError\":\"" + error + "\"";
         response += "}";
 
         Serial.println("=== Force stock result ===");

@@ -187,6 +187,7 @@ void Scheduler::executeFetch() {
 
         JsonObject moduleData = config["modules"][context.currentModule];
         moduleData["lastSuccess"] = true;
+        moduleData["lastError"] = "";
     } else {
         Serial.print("Fetch failed: ");
         Serial.println(errorMsg);
@@ -196,6 +197,7 @@ void Scheduler::executeFetch() {
 
         JsonObject moduleData = config["modules"][context.currentModule];
         moduleData["lastSuccess"] = false;
+        moduleData["lastError"] = errorMsg;
 
         Serial.print("Retry count: ");
         Serial.print(context.retryCount);
