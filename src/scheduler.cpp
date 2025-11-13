@@ -131,18 +131,25 @@ void Scheduler::requestFetch(const char* moduleId, bool forced) {
 }
 
 void Scheduler::executeFetch() {
+    Serial.println("\n=== executeFetch() called ===");
+    Serial.print("Current module: ");
+    Serial.println(context.currentModule);
+
     if (modules.find(context.currentModule) == modules.end()) {
+        Serial.print("ERROR: Module not found in map: ");
+        Serial.println(context.currentModule);
         context.state = IDLE;
         return;
     }
 
     ModuleInterface* module = modules[context.currentModule];
-
-    Serial.print("Fetching data for: ");
-    Serial.println(context.currentModule);
+    Serial.print("Module found, calling fetch()...");
 
     String errorMsg;
+    Serial.println("About to call module->fetch()");
     bool success = module->fetch(errorMsg);
+    Serial.print("module->fetch() returned: ");
+    Serial.println(success ? "true" : "false");
 
     unsigned long now = millis() / 1000;
     context.lastFetchTime = now;

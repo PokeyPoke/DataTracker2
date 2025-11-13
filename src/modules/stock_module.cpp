@@ -15,12 +15,17 @@ public:
     }
 
     bool fetch(String& errorMsg) override {
+        Serial.println("\n*** StockModule::fetch() CALLED ***");
+
         // Get ticker from config
         JsonObject stockData = config["modules"]["stock"];
         String ticker = stockData["ticker"] | "AAPL";
 
         Serial.print("Stock: Fetching price for ");
         Serial.println(ticker);
+        Serial.print("Stock: Ticker from config: '");
+        Serial.print(ticker);
+        Serial.println("'");
 
         if (ticker.length() == 0) {
             errorMsg = "Ticker is empty";
