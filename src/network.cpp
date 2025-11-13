@@ -744,6 +744,37 @@ void NetworkManager::setupSettingsServer() {
     server->on("/api/test-stock", HTTP_POST, testStockHandler);
     server->on("/api/test-stock/", HTTP_POST, testStockHandler);
 
+    // Force stock fetch endpoint (no auth for debugging)
+    server->on("/api/force-stock", HTTP_GET, [this]() {
+        extern Scheduler scheduler;
+
+        Serial.println("\n=== /api/force-stock called ===");
+
+        // Force a stock fetch
+        scheduler.requestFetch("stock", true);
+
+        // Wait a moment
+        delay(3000);
+
+        // Check result
+        JsonObject stock = config["modules"]["stock"];
+        unsigned long lastUpdate = stock["lastUpdate"] | 0;
+        float value = stock["value"] | 0.0;
+        bool success = stock["lastSuccess"] | false;
+
+        String response = "{";
+        response += "\"triggered\":true,";
+        response += "\"lastUpdate\":" + String(lastUpdate) + ",";
+        response += "\"value\":" + String(value) + ",";
+        response += "\"lastSuccess\":" + String(success ? "true" : "false");
+        response += "}";
+
+        Serial.println("=== Force stock result ===");
+        Serial.println(response);
+
+        server->send(200, "application/json", response);
+    });
+
     // Status endpoint - check if scheduler is working
     server->on("/api/status", HTTP_GET, [this]() {
         extern Scheduler scheduler;
