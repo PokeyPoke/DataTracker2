@@ -190,11 +190,11 @@ html+='<div class="search-item" onclick="selectWeather(\''+city.name.replace(/'/
 html+=city.name+(city.admin1?', '+city.admin1:'')+(city.country?' ('+city.country+')':'')+'</div>';});}
 results.innerHTML=html||'<div class="search-item">No results</div>';}).catch(()=>{results.innerHTML='<div class="search-item">Error searching</div>';});},300);}
 function selectWeather(location,lat,lon,country){
-var fullLocation=location+(country?' ('+country+')':'');
-window.weather_config={location:encodeURIComponent(fullLocation),latitude:parseFloat(lat),longitude:parseFloat(lon)};
+window.weather_config={location:location,latitude:parseFloat(lat),longitude:parseFloat(lon)};
+console.log('Selected weather:',window.weather_config);
 document.getElementById('weatherSearch').value='';
 setTimeout(()=>{document.getElementById('weatherResults').style.display='none';},200);
-updateWeatherDisplay({location:fullLocation,latitude:lat,longitude:lon});}
+updateWeatherDisplay({location:location,latitude:lat,longitude:lon});}
 function saveSettings(){var cfg={device:{activeModule:document.getElementById('activeModule').value},
 modules:{bitcoin:window.bitcoin_config||{},ethereum:window.ethereum_config||{},
 stock:window.stock_config||{ticker:'AAPL'},
@@ -685,8 +685,8 @@ void NetworkManager::setupSettingsServer() {
     server->on("/api/version", HTTP_GET, [this]() {
         Serial.println("DEBUG: /api/version endpoint called!");
         String response = "{";
-        response += "\"version\":\"v2.6.7-WEATHER-FIX\",";
-        response += "\"build\":\"Weather Config Field Name Fix - Nov 13 2024\",";
+        response += "\"version\":\"v2.6.8-WEATHER-DEBUG\",";
+        response += "\"build\":\"Weather Debug with Logging - Nov 13 2024\",";
         response += "\"uptime\":" + String(millis() / 1000);
         response += "}";
         Serial.print("DEBUG: Sending response: ");
@@ -1104,42 +1104,40 @@ void NetworkManager::handleUpdateConfig() {
 
         // Update weather config
         if (modules.containsKey("weather")) {
+            Serial.println("=== Processing weather config update ===");
+
             if (modules["weather"].containsKey("location")) {
                 String location = modules["weather"]["location"].as<String>();
-                // URL decode the location string
-                String decoded = "";
-                for (size_t i = 0; i < location.length(); i++) {
-                    char c = location[i];
-                    if (c == '%' && i + 2 < location.length()) {
-                        char hex[3] = {location[i+1], location[i+2], 0};
-                        decoded += (char)strtol(hex, NULL, 16);
-                        i += 2;
-                    } else if (c == '+') {
-                        decoded += ' ';
-                    } else {
-                        decoded += c;
-                    }
-                }
-                config["modules"]["weather"]["location"] = decoded;
-                // Clear cached weather data to force fresh fetch
-                config["modules"]["weather"]["temperature"] = 0;
-                config["modules"]["weather"]["condition"] = "Unknown";
-                config["modules"]["weather"]["lastUpdate"] = 0;
-                config["modules"]["weather"]["lastSuccess"] = false;
-                Serial.print("Weather location updated to: ");
-                Serial.println(decoded);
-                Serial.print("Location bytes: ");
-                for (size_t i = 0; i < decoded.length(); i++) {
-                    Serial.printf("%02X ", (uint8_t)decoded[i]);
-                }
-                Serial.println();
+                config["modules"]["weather"]["location"] = location;
+                Serial.print("Weather location set to: ");
+                Serial.println(location);
             }
+
             if (modules["weather"].containsKey("latitude")) {
-                config["modules"]["weather"]["latitude"] = modules["weather"]["latitude"].as<float>();
+                float lat = modules["weather"]["latitude"].as<float>();
+                config["modules"]["weather"]["latitude"] = lat;
+                Serial.print("Weather latitude set to: ");
+                Serial.println(lat, 6);
+            } else {
+                Serial.println("WARNING: No latitude in request!");
             }
+
             if (modules["weather"].containsKey("longitude")) {
-                config["modules"]["weather"]["longitude"] = modules["weather"]["longitude"].as<float>();
+                float lon = modules["weather"]["longitude"].as<float>();
+                config["modules"]["weather"]["longitude"] = lon;
+                Serial.print("Weather longitude set to: ");
+                Serial.println(lon, 6);
+            } else {
+                Serial.println("WARNING: No longitude in request!");
             }
+
+            // Clear cached weather data to force fresh fetch
+            config["modules"]["weather"]["temperature"] = 0;
+            config["modules"]["weather"]["condition"] = "Unknown";
+            config["modules"]["weather"]["lastUpdate"] = 0;
+            config["modules"]["weather"]["lastSuccess"] = false;
+
+            Serial.println("Weather cache cleared, will fetch on next cycle");
         }
 
         // Update custom config

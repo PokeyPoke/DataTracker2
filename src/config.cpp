@@ -84,8 +84,8 @@ bool loadConfiguration() {
         Serial.println("Default config populated and saved");
     }
 
-    // Debug: Show what was loaded for crypto modules
-    Serial.println("=== Loaded Config (Crypto Modules) ===");
+    // Debug: Show what was loaded for crypto and weather modules
+    Serial.println("=== Loaded Config (Modules) ===");
     JsonObject bitcoin = config["modules"]["bitcoin"];
     Serial.print("Bitcoin - ID: ");
     Serial.print(bitcoin["cryptoId"] | "NOT SET");
@@ -101,6 +101,14 @@ bool loadConfiguration() {
     Serial.print(ethereum["cryptoName"] | "NOT SET");
     Serial.print(", Symbol: ");
     Serial.println(ethereum["cryptoSymbol"] | "NOT SET");
+
+    JsonObject weather = config["modules"]["weather"];
+    Serial.print("Weather - Location: ");
+    Serial.print(weather["location"] | "NOT SET");
+    Serial.print(", Lat: ");
+    Serial.print(weather["latitude"] | 0.0, 6);
+    Serial.print(", Lon: ");
+    Serial.println(weather["longitude"] | 0.0, 6);
     Serial.println("=======================================");
 
     // Check if config is overflowing
@@ -144,8 +152,8 @@ bool saveConfiguration(bool force) {
     lastSaveTime = now;
     Serial.println("Configuration saved successfully");
 
-    // Debug: Show what was saved for crypto modules
-    Serial.println("=== Saved Config (Crypto Modules) ===");
+    // Debug: Show what was saved for crypto and weather modules
+    Serial.println("=== Saved Config (Modules) ===");
     JsonObject bitcoin = config["modules"]["bitcoin"];
     Serial.print("Bitcoin - ID: ");
     Serial.print(bitcoin["cryptoId"] | "NOT SET");
@@ -161,6 +169,14 @@ bool saveConfiguration(bool force) {
     Serial.print(ethereum["cryptoName"] | "NOT SET");
     Serial.print(", Symbol: ");
     Serial.println(ethereum["cryptoSymbol"] | "NOT SET");
+
+    JsonObject weather = config["modules"]["weather"];
+    Serial.print("Weather - Location: ");
+    Serial.print(weather["location"] | "NOT SET");
+    Serial.print(", Lat: ");
+    Serial.print(weather["latitude"] | 0.0, 6);
+    Serial.print(", Lon: ");
+    Serial.println(weather["longitude"] | 0.0, 6);
     Serial.println("======================================");
 
     // Check if config is overflowing
