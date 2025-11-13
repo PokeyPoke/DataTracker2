@@ -755,13 +755,20 @@ void NetworkManager::setupSettingsServer() {
         unsigned long stockLastUpdate = stock["lastUpdate"] | 0;
         unsigned long btcLastUpdate = bitcoin["lastUpdate"] | 0;
 
+        // Check config
+        bool hasStockConfig = stock["ticker"].as<String>().length() > 0;
+        bool hasBitcoinConfig = bitcoin["cryptoId"].as<String>().length() > 0;
+
         String response = "{";
         response += "\"stock_lastUpdate\":" + String(stockLastUpdate) + ",";
         response += "\"stock_value\":" + String(stock["value"] | 0.0) + ",";
         response += "\"stock_lastSuccess\":" + String(stock["lastSuccess"] | false ? "true" : "false") + ",";
+        response += "\"stock_ticker\":\"" + stock["ticker"].as<String>() + "\",";
+        response += "\"stock_config_exists\":" + String(hasStockConfig ? "true" : "false") + ",";
         response += "\"bitcoin_lastUpdate\":" + String(btcLastUpdate) + ",";
         response += "\"bitcoin_value\":" + String(bitcoin["value"] | 0.0) + ",";
         response += "\"bitcoin_lastSuccess\":" + String(bitcoin["lastSuccess"] | false ? "true" : "false") + ",";
+        response += "\"bitcoin_config_exists\":" + String(hasBitcoinConfig ? "true" : "false") + ",";
         response += "\"current_time\":" + String(now) + ",";
         response += "\"stock_time_since_update\":" + String(now - stockLastUpdate) + ",";
         response += "\"bitcoin_time_since_update\":" + String(now - btcLastUpdate) + "";
