@@ -42,20 +42,14 @@ void DisplayManager::drawHeader(const char* title) {
 void DisplayManager::drawStatusBar(bool wifiConnected, unsigned long lastUpdate, bool isStale) {
     u8g2.setFont(u8g2_font_6x10_tr);
 
-    // WiFi indicator
-    if (wifiConnected) {
-        u8g2.drawStr(2, 62, "W");  // WiFi connected
-    } else {
-        u8g2.drawStr(2, 62, "X");  // WiFi disconnected
-    }
-
-    // Timestamp
+    // Timestamp (moved to left since we removed WiFi indicator)
     String timeAgo = getTimeAgo(lastUpdate);
-    u8g2.drawStr(15, 62, timeAgo.c_str());
+    u8g2.drawStr(2, 62, timeAgo.c_str());
 
-    // Stale indicator
+    // Stale indicator with WiFi symbol crossed out
     if (isStale) {
-        u8g2.drawStr(115, 62, "!");
+        // Draw WiFi icon approximation with line through it
+        u8g2.drawStr(115, 62, "⊘");  // Or we can draw custom WiFi symbol
     }
 }
 
@@ -122,14 +116,20 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
     // Header with actual crypto name
     drawHeader(cryptoNameStr.c_str());
 
-    // Price
+    // Price with smart formatting
     char priceStr[16];
     if (price >= 10000) {
         snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
     } else if (price >= 1000) {
-        snprintf(priceStr, sizeof(priceStr), "$%.1f", price);
-    } else {
         snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
+    } else if (price >= 100) {
+        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
+    } else if (price >= 1) {
+        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
+    } else if (price >= 0.001) {
+        snprintf(priceStr, sizeof(priceStr), "$%.4f", price);
+    } else {
+        snprintf(priceStr, sizeof(priceStr), "$%.6f", price);
     }
     drawCenteredValue(priceStr, 38);
 
@@ -159,12 +159,20 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
     // Header with actual crypto name
     drawHeader(cryptoNameStr.c_str());
 
-    // Price
+    // Price with smart formatting
     char priceStr[16];
-    if (price >= 1000) {
+    if (price >= 10000) {
         snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
-    } else {
+    } else if (price >= 1000) {
         snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
+    } else if (price >= 100) {
+        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
+    } else if (price >= 1) {
+        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
+    } else if (price >= 0.001) {
+        snprintf(priceStr, sizeof(priceStr), "$%.4f", price);
+    } else {
+        snprintf(priceStr, sizeof(priceStr), "$%.6f", price);
     }
     drawCenteredValue(priceStr, 38);
 
@@ -189,9 +197,21 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
     // Header with ticker
     drawHeader(ticker);
 
-    // Price
+    // Price with smart formatting
     char priceStr[16];
-    snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
+    if (price >= 10000) {
+        snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
+    } else if (price >= 1000) {
+        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
+    } else if (price >= 100) {
+        snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
+    } else if (price >= 1) {
+        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
+    } else if (price >= 0.01) {
+        snprintf(priceStr, sizeof(priceStr), "$%.3f", price);
+    } else {
+        snprintf(priceStr, sizeof(priceStr), "$%.5f", price);
+    }
     drawCenteredValue(priceStr, 38);
 
     // Change percentage
@@ -233,10 +253,10 @@ void DisplayManager::showWeather(float temp, const char* condition, const char* 
     int condWidth = u8g2.getStrWidth(condition);
     u8g2.drawStr((128 - condWidth) / 2, 46, condition);
 
-    // Location
-    u8g2.setFont(u8g2_font_6x10_tr);
-    int locWidth = u8g2.getStrWidth(location);
-    u8g2.drawStr((128 - locWidth) / 2, 56, location);
+    // Location with UTF8 support for accents
+    u8g2.setFont(u8g2_font_6x12_t_cyrillic);  // Supports extended characters including accents
+    int locWidth = u8g2.getUTF8Width(location);
+    u8g2.drawUTF8((128 - locWidth) / 2, 56, location);
 
     // Status bar
     drawStatusBar(WiFi.isConnected(), lastUpdate, stale);
