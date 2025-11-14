@@ -516,63 +516,83 @@ void DisplayManager::showSettings(uint32_t securityCode, const char* deviceIP, u
 void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const char* slot3, const char* slot4, unsigned long lastUpdate, bool stale) {
     u8g2.clearBuffer();
 
-    // Helper to get module value display string
-    auto getModuleValue = [](const char* moduleId) -> String {
-        if (strlen(moduleId) == 0) return "---";
+    // Helper struct to hold label and value separately
+    struct ModuleData {
+        String label;
+        String value;
+    };
+
+    auto getModuleData = [](const char* moduleId) -> ModuleData {
+        if (strlen(moduleId) == 0) return {"", "---"};
 
         JsonObject module = config["modules"][moduleId];
-        if (module.isNull()) return "N/A";
+        if (module.isNull()) return {"", "N/A"};
 
         String type = module["type"] | "";
 
         if (type == "crypto") {
             String symbol = module["cryptoSymbol"] | "?";
             float value = module["value"] | 0.0;
-            return symbol + ":" + String((int)value);
+            // Format with K for thousands
+            String valueStr;
+            if (value >= 1000) {
+                valueStr = String((int)(value / 1000)) + "K";
+            } else {
+                valueStr = String((int)value);
+            }
+            return {symbol, valueStr};
         } else if (type == "stock") {
             String ticker = module["ticker"] | "?";
             float value = module["value"] | 0.0;
-            return ticker + ":" + String((int)value);
+            return {ticker, String((int)value)};
         } else if (type == "weather") {
             float temp = module["temperature"] | 0.0;
-            return String((int)temp) + "C";
+            String location = module["location"] | "";
+            // Abbreviate location to first 4 chars
+            if (location.length() > 4) location = location.substring(0, 4);
+            return {location, String((int)temp) + "C"};
         } else if (type == "custom") {
             float value = module["value"] | 0.0;
+            String label = module["label"] | "";
             String unit = module["unit"] | "";
-            return String(value, 1) + unit;
+            // Abbreviate label to first 4 chars
+            if (label.length() > 4) label = label.substring(0, 4);
+            return {label, String(value, 1) + unit};
         }
 
-        return "---";
+        return {"", "---"};
     };
 
-    // Get values for all 4 slots
-    String val1 = getModuleValue(slot1);
-    String val2 = getModuleValue(slot2);
-    String val3 = getModuleValue(slot3);
-    String val4 = getModuleValue(slot4);
-
-    // Draw 2x2 grid
-    u8g2.setFont(u8g2_font_helvB08_tr);
+    // Get data for all 4 slots
+    ModuleData data1 = getModuleData(slot1);
+    ModuleData data2 = getModuleData(slot2);
+    ModuleData data3 = getModuleData(slot3);
+    ModuleData data4 = getModuleData(slot4);
 
     // Dividing lines
     u8g2.drawHLine(0, 32, 128);  // Horizontal middle
     u8g2.drawVLine(64, 0, 64);    // Vertical middle
 
-    // Top-left (slot1)
-    int w1 = u8g2.getStrWidth(val1.c_str());
-    u8g2.drawStr((64 - w1) / 2, 20, val1.c_str());
+    // Helper to draw one quadrant
+    auto drawQuadrant = [&](int x, int y, ModuleData data) {
+        // Small font for label at top
+        u8g2.setFont(u8g2_font_5x7_tr);
+        if (data.label.length() > 0) {
+            int labelWidth = u8g2.getStrWidth(data.label.c_str());
+            u8g2.drawStr(x + (64 - labelWidth) / 2, y + 8, data.label.c_str());
+        }
 
-    // Top-right (slot2)
-    int w2 = u8g2.getStrWidth(val2.c_str());
-    u8g2.drawStr(64 + (64 - w2) / 2, 20, val2.c_str());
+        // Large font for value in center
+        u8g2.setFont(u8g2_font_helvB12_tr);
+        int valueWidth = u8g2.getStrWidth(data.value.c_str());
+        u8g2.drawStr(x + (64 - valueWidth) / 2, y + 24, data.value.c_str());
+    };
 
-    // Bottom-left (slot3)
-    int w3 = u8g2.getStrWidth(val3.c_str());
-    u8g2.drawStr((64 - w3) / 2, 52, val3.c_str());
-
-    // Bottom-right (slot4)
-    int w4 = u8g2.getStrWidth(val4.c_str());
-    u8g2.drawStr(64 + (64 - w4) / 2, 52, val4.c_str());
+    // Draw all 4 quadrants
+    drawQuadrant(0, 0, data1);    // Top-left
+    drawQuadrant(64, 0, data2);   // Top-right
+    drawQuadrant(0, 32, data3);   // Bottom-left
+    drawQuadrant(64, 32, data4);  // Bottom-right
 
     u8g2.sendBuffer();
 }
