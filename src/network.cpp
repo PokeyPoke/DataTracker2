@@ -1627,9 +1627,9 @@ void NetworkManager::setupSettingsServer() {
             newModule["temperature"] = 0.0;
             newModule["condition"] = "Unknown";
         } else if (moduleType == "custom") {
-            newModule["label"] = doc["label"] | "My Metric";
+            newModule["label"] = sanitize(doc["label"] | "My Metric");
             newModule["value"] = doc["value"] | 0.0;
-            newModule["unit"] = doc["unit"] | "units";
+            newModule["unit"] = sanitize(doc["unit"] | "units");
         } else if (moduleType == "quad") {
             newModule["slot1"] = doc["slot1"] | "";
             newModule["slot2"] = doc["slot2"] | "";
