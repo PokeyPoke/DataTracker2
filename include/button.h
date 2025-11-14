@@ -6,8 +6,7 @@
 // Button timing constants
 #define DEBOUNCE_DELAY 50           // ms
 #define SHORT_PRESS_MAX 1000        // ms
-#define BRIGHTNESS_START 4200       // ms (4.2s: start brightness adjustment)
-#define BRIGHTNESS_STEP_INTERVAL 200  // ms between brightness steps
+#define LONG_PRESS_MIN 4200         // ms (4.2s: enter/exit brightness mode)
 
 // Capacitive touch settings
 #define TOUCH_THRESHOLD_RATIO 0.7  // 70% of baseline is considered a touch
@@ -15,9 +14,8 @@
 // Button events
 enum ButtonEvent {
     NONE,
-    SHORT_PRESS,              // < 1s: Cycle to next module
-    BRIGHTNESS_ADJUSTING,     // Held > 4.2s: Adjusting brightness
-    BRIGHTNESS_RELEASED       // Released after brightness adjustment
+    SHORT_PRESS,              // < 1s: Action depends on mode
+    LONG_PRESS                // 4.2s+: Toggle brightness mode
 };
 
 class ButtonHandler {
@@ -27,8 +25,6 @@ private:
     unsigned long pressStartTime;
     unsigned long lastDebounceTime;
     bool isPressed;
-    bool brightnessMode;
-    unsigned long lastBrightnessStep;
 
     // Capacitive touch
     uint16_t touchBaseline;

@@ -522,41 +522,34 @@ void DisplayManager::setBrightness(uint8_t level) {
 }
 
 void DisplayManager::cycleBrightness() {
-    // Brightness range: 5% to 100% (13 to 255)
-    const uint8_t MIN_BRIGHTNESS = 13;   // ~5%
-    const uint8_t MAX_BRIGHTNESS = 255;  // 100%
+    // Define 5 brightness levels from low to high
+    const uint8_t levels[] = {51, 102, 153, 204, 255};  // 20%, 40%, 60%, 80%, 100%
+    const int levelCount = 5;
 
-    // Variable step size based on current brightness
-    uint8_t stepSize;
-    if (currentBrightness <= 26) {
-        // At lowest end (5-10%): step by 1% (~2.55 per step)
-        stepSize = 3;
-    } else if (currentBrightness <= 51) {
-        // Low range (10-20%): step by 5% (~12.75 per step)
-        stepSize = 13;
-    } else {
-        // Normal range (20-100%): step by 10% (25.5 per step)
-        stepSize = 26;
-    }
-
-    // Ping-pong logic
-    if (brightnessIncreasing) {
-        if (currentBrightness + stepSize >= MAX_BRIGHTNESS) {
-            // At max, reverse direction
-            currentBrightness = MAX_BRIGHTNESS;
-            brightnessIncreasing = false;
-        } else {
-            currentBrightness += stepSize;
-        }
-    } else {
-        if (currentBrightness <= MIN_BRIGHTNESS + stepSize) {
-            // At min, reverse direction
-            currentBrightness = MIN_BRIGHTNESS;
-            brightnessIncreasing = true;
-        } else {
-            currentBrightness -= stepSize;
+    // Find current level index
+    int currentIndex = -1;
+    for (int i = 0; i < levelCount; i++) {
+        if (currentBrightness == levels[i]) {
+            currentIndex = i;
+            break;
         }
     }
+
+    // If not at a predefined level, find closest
+    if (currentIndex == -1) {
+        int minDiff = 9999;
+        for (int i = 0; i < levelCount; i++) {
+            int diff = abs(currentBrightness - levels[i]);
+            if (diff < minDiff) {
+                minDiff = diff;
+                currentIndex = i;
+            }
+        }
+    }
+
+    // Cycle to next level (wrap around)
+    currentIndex = (currentIndex + 1) % levelCount;
+    currentBrightness = levels[currentIndex];
 
     setBrightness(currentBrightness);
 

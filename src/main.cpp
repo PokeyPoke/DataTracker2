@@ -28,6 +28,7 @@ ButtonHandler button(BUTTON_PIN);
 // State management
 bool configMode = false;
 ConfigQRState qrState = WAITING_FOR_CLIENT;  // Track QR display state
+bool brightnessMode = false;  // Brightness adjustment mode
 bool buttonDebugMode = false;  // Button debug mode - disabled by default (use 'button' command to enable)
 unsigned long buttonDebugStartTime = 0;
 unsigned long lastDisplayUpdate = 0;
@@ -48,8 +49,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.16-HOLD-BRIGHTNESS ===");
-    Serial.println("Build: Hold-to-Adjust Brightness - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.17-BRIGHTNESS-MODE ===");
+    Serial.println("Build: Brightness Mode Toggle - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -238,34 +239,36 @@ void loop() {
     // Run scheduler (fetch data if needed)
     scheduler.tick();
 
-    // Update display
-    String activeModule = config["device"]["activeModule"] | "bitcoin";
-    bool moduleChanged = (activeModule != lastDisplayedModule);
+    // Update display (skip if in brightness mode)
+    if (!brightnessMode) {
+        String activeModule = config["device"]["activeModule"] | "bitcoin";
+        bool moduleChanged = (activeModule != lastDisplayedModule);
 
-    // Settings module: refresh security code every 30 seconds
-    if (activeModule == "settings") {
-        if (moduleChanged) {
-            // First time showing settings - generate code immediately
-            scheduler.requestFetch("settings", true);
-            lastSettingsCodeRefresh = now;
-            display.showModule(activeModule.c_str());
-            lastDisplayedModule = activeModule;
-            lastDisplayUpdate = now;
-        } else if (now - lastSettingsCodeRefresh > SETTINGS_CODE_REFRESH) {
-            // Refresh code every 30 seconds while on settings screen
-            Serial.println("Refreshing security code (30s interval)");
-            scheduler.requestFetch("settings", true);
-            lastSettingsCodeRefresh = now;
-            display.showModule(activeModule.c_str());
-            lastDisplayUpdate = now;
-        }
-    } else {
-        // Other modules: update every 1 second for real-time data
-        bool shouldUpdate = moduleChanged || (now - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL);
-        if (shouldUpdate) {
-            display.showModule(activeModule.c_str());
-            lastDisplayedModule = activeModule;
-            lastDisplayUpdate = now;
+        // Settings module: refresh security code every 30 seconds
+        if (activeModule == "settings") {
+            if (moduleChanged) {
+                // First time showing settings - generate code immediately
+                scheduler.requestFetch("settings", true);
+                lastSettingsCodeRefresh = now;
+                display.showModule(activeModule.c_str());
+                lastDisplayedModule = activeModule;
+                lastDisplayUpdate = now;
+            } else if (now - lastSettingsCodeRefresh > SETTINGS_CODE_REFRESH) {
+                // Refresh code every 30 seconds while on settings screen
+                Serial.println("Refreshing security code (30s interval)");
+                scheduler.requestFetch("settings", true);
+                lastSettingsCodeRefresh = now;
+                display.showModule(activeModule.c_str());
+                lastDisplayUpdate = now;
+            }
+        } else {
+            // Other modules: update every 1 second for real-time data
+            bool shouldUpdate = moduleChanged || (now - lastDisplayUpdate > DISPLAY_UPDATE_INTERVAL);
+            if (shouldUpdate) {
+                display.showModule(activeModule.c_str());
+                lastDisplayedModule = activeModule;
+                lastDisplayUpdate = now;
+            }
         }
     }
 
@@ -276,20 +279,34 @@ void loop() {
 void handleButtonEvent(ButtonEvent event) {
     switch (event) {
         case SHORT_PRESS:
-            cycleToNextModule();
+            if (brightnessMode) {
+                // In brightness mode: cycle brightness level
+                display.cycleBrightness();
+                // Show brightness briefly (will be handled in loop)
+            } else {
+                // Normal mode: cycle to next module
+                cycleToNextModule();
+            }
             break;
 
-        case BRIGHTNESS_ADJUSTING:
-            // Continuously step brightness while held
-            display.cycleBrightness();
-            break;
+        case LONG_PRESS:
+            // Toggle brightness mode
+            brightnessMode = !brightnessMode;
 
-        case BRIGHTNESS_RELEASED:
-            // Save brightness when user releases button
-            config["device"]["brightness"] = display.getBrightness();
-            saveConfiguration();
-            Serial.print("Brightness saved: ");
-            Serial.println(display.getBrightness());
+            if (brightnessMode) {
+                // Entering brightness mode
+                Serial.println("Entered brightness mode");
+                display.cycleBrightness();  // Show current brightness
+            } else {
+                // Exiting brightness mode
+                Serial.println("Exited brightness mode");
+                // Save brightness setting
+                config["device"]["brightness"] = display.getBrightness();
+                saveConfiguration();
+                Serial.print("Brightness saved: ");
+                Serial.println(display.getBrightness());
+                // Display will return to normal module in main loop
+            }
             break;
 
         default:

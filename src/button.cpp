@@ -2,9 +2,8 @@
 
 ButtonHandler::ButtonHandler(uint8_t buttonPin, bool capacitiveTouch)
     : pin(buttonPin), lastState(false), pressStartTime(0),
-      lastDebounceTime(0), isPressed(false), brightnessMode(false),
-      lastBrightnessStep(0), touchBaseline(0), touchThreshold(0),
-      useCapacitiveTouch(capacitiveTouch) {
+      lastDebounceTime(0), isPressed(false), touchBaseline(0),
+      touchThreshold(0), useCapacitiveTouch(capacitiveTouch) {
 }
 
 void ButtonHandler::init() {
@@ -80,29 +79,7 @@ ButtonEvent ButtonHandler::check() {
         if (currentState && !isPressed) {
             isPressed = true;
             pressStartTime = now;
-            brightnessMode = false;
-            lastBrightnessStep = 0;
             Serial.println("Button touched");
-        }
-
-        // Button currently held - check for brightness mode
-        if (currentState && isPressed) {
-            unsigned long pressDuration = now - pressStartTime;
-
-            // Enter brightness mode after 4.2 seconds
-            if (pressDuration >= BRIGHTNESS_START) {
-                if (!brightnessMode) {
-                    brightnessMode = true;
-                    lastBrightnessStep = now;
-                    Serial.println("Entering brightness adjustment mode");
-                }
-
-                // Trigger brightness step every BRIGHTNESS_STEP_INTERVAL ms
-                if (now - lastBrightnessStep >= BRIGHTNESS_STEP_INTERVAL) {
-                    lastBrightnessStep = now;
-                    return BRIGHTNESS_ADJUSTING;
-                }
-            }
         }
 
         // Button released
@@ -114,16 +91,15 @@ ButtonEvent ButtonHandler::check() {
             Serial.print(pressDuration);
             Serial.println(" ms");
 
-            // If releasing from brightness mode, return special event
-            if (brightnessMode) {
-                brightnessMode = false;
-                Serial.println("Brightness adjustment complete");
-                return BRIGHTNESS_RELEASED;
+            // Long press: 4.2+ seconds
+            if (pressDuration >= LONG_PRESS_MIN) {
+                Serial.println("Long press triggered");
+                return LONG_PRESS;
             }
 
-            // Short press: cycle module
+            // Short press: < 1 second
             if (pressDuration >= DEBOUNCE_DELAY && pressDuration < SHORT_PRESS_MAX) {
-                Serial.println("Short press triggered (cycle module)");
+                Serial.println("Short press triggered");
                 return SHORT_PRESS;
             }
         }
