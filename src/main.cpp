@@ -29,6 +29,7 @@ ButtonHandler button(BUTTON_PIN);
 bool configMode = false;
 ConfigQRState qrState = WAITING_FOR_CLIENT;  // Track QR display state
 bool brightnessMode = false;  // Brightness adjustment mode
+unsigned long lastBrightnessActivity = 0;  // Track last brightness mode activity
 bool buttonDebugMode = false;  // Button debug mode - disabled by default (use 'button' command to enable)
 unsigned long buttonDebugStartTime = 0;
 unsigned long lastDisplayUpdate = 0;
@@ -40,6 +41,7 @@ String lastDisplayedModule = "";  // Track which module is currently shown
 #define BUTTON_DEBUG_DURATION 30000   // Auto-disable after 30 seconds
 #define QR_UPDATE_INTERVAL 500        // Check for client connection every 500ms
 #define SETTINGS_CODE_REFRESH 30000   // Refresh security code every 30s
+#define BRIGHTNESS_TIMEOUT 7000       // Exit brightness mode after 7s of inactivity
 
 // Function prototypes
 void handleButtonEvent(ButtonEvent event);
@@ -49,8 +51,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.18-BRIGHTNESS-PINGPONG ===");
-    Serial.println("Build: Brightness Ping-Pong with Fine Control - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.19-BRIGHTNESS-TIMEOUT ===");
+    Serial.println("Build: Brightness Auto-Exit Timeout - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -228,6 +230,17 @@ void loop() {
     }
     #endif
 
+    // Check brightness mode timeout
+    if (brightnessMode && (now - lastBrightnessActivity > BRIGHTNESS_TIMEOUT)) {
+        Serial.println("Brightness mode timeout - returning to modules");
+        brightnessMode = false;
+        // Save brightness setting
+        config["device"]["brightness"] = display.getBrightness();
+        saveConfiguration();
+        Serial.print("Brightness saved: ");
+        Serial.println(display.getBrightness());
+    }
+
     // Monitor WiFi connection
     if (!network.isConnected()) {
         network.reconnect();
@@ -282,7 +295,7 @@ void handleButtonEvent(ButtonEvent event) {
             if (brightnessMode) {
                 // In brightness mode: cycle brightness level
                 display.cycleBrightness();
-                // Show brightness briefly (will be handled in loop)
+                lastBrightnessActivity = millis();  // Reset timeout
             } else {
                 // Normal mode: cycle to next module
                 cycleToNextModule();
@@ -297,6 +310,7 @@ void handleButtonEvent(ButtonEvent event) {
                 // Entering brightness mode
                 Serial.println("Entered brightness mode");
                 display.cycleBrightness();  // Show current brightness
+                lastBrightnessActivity = millis();  // Start timeout timer
             } else {
                 // Exiting brightness mode
                 Serial.println("Exited brightness mode");
