@@ -552,7 +552,25 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
         } else if (type == "stock") {
             String ticker = module["ticker"] | "?";
             float value = module["value"] | 0.0;
-            return {ticker, String((int)value)};
+            // Smart formatting based on value magnitude
+            String valueStr;
+            if (value >= 1000) {
+                // Large values: show in K format (e.g., "1K")
+                valueStr = String((int)(value / 1000)) + "K";
+            } else if (value >= 10) {
+                // Medium-large values: show as integer (e.g., "180")
+                valueStr = String((int)value);
+            } else if (value >= 1) {
+                // Medium values: show 2 decimals (e.g., "5.25")
+                valueStr = String(value, 2);
+            } else if (value >= 0.01) {
+                // Small values: show 3 decimals (e.g., "0.123")
+                valueStr = String(value, 3);
+            } else {
+                // Very small values: show 5 decimals (e.g., "0.00012")
+                valueStr = String(value, 5);
+            }
+            return {ticker, valueStr};
         } else if (type == "weather") {
             float temp = module["temperature"] | 0.0;
             String location = module["location"] | "";
