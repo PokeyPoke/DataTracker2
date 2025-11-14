@@ -1595,16 +1595,44 @@ void NetworkManager::setupSettingsServer() {
         JsonObject newModule = config["modules"][moduleId].to<JsonObject>();
         newModule["type"] = moduleType;
 
-        // Helper to sanitize strings (remove control characters)
+        // Helper to sanitize strings (remove control characters and convert UTF-8 to ASCII)
         auto sanitize = [](const char* input) -> String {
             String result = "";
-            for (size_t i = 0; input[i] != '\0'; i++) {
-                char c = input[i];
-                // Allow printable ASCII chars, space, and basic punctuation
-                if (c >= 32 && c < 127) {
-                    result += c;
+            const char* p = input;
+
+            while (*p) {
+                unsigned char c = *p;
+
+                // Single-byte ASCII character
+                if ((c & 0x80) == 0) {
+                    // Allow printable ASCII chars (space and above, excluding DEL)
+                    if (c >= 32 && c < 127) {
+                        result += (char)c;
+                    }
+                    p++;
                 }
+                // 2-byte UTF-8 sequence
+                else if ((c & 0xE0) == 0xC0 && *(p+1)) {
+                    unsigned char c1 = *p++;
+                    unsigned char c2 = *p++;
+
+                    // Czech characters: Ř/ř, Č/č, etc.
+                    if (c1 == 0xC5 && (c2 == 0x98 || c2 == 0x99)) result += 'R';  // Ř/ř
+                    else if (c1 == 0xC4 && (c2 == 0x8C || c2 == 0x8D)) result += 'C';  // Č/č
+                    else if (c1 == 0xC3 && c2 == 0xA1) result += 'a';  // á
+                    else if (c1 == 0xC3 && c2 == 0xA9) result += 'e';  // é
+                    else if (c1 == 0xC3 && c2 == 0xAD) result += 'i';  // í
+                    else if (c1 == 0xC3 && c2 == 0xB3) result += 'o';  // ó
+                    else if (c1 == 0xC3 && c2 == 0xBA) result += 'u';  // ú
+                    else if (c1 == 0xC3 && c2 == 0xBD) result += 'y';  // ý
+                    // Skip unknown accents
+                }
+                // Skip 3-byte and 4-byte UTF-8 sequences
+                else if ((c & 0xF0) == 0xE0 && *(p+1) && *(p+2)) p += 3;
+                else if ((c & 0xF8) == 0xF0 && *(p+1) && *(p+2) && *(p+3)) p += 4;
+                else p++;  // Skip invalid sequences
             }
+
             return result;
         };
 
@@ -1772,16 +1800,44 @@ void NetworkManager::setupSettingsServer() {
 
         String moduleType = module["type"] | "";
 
-        // Helper to sanitize strings (remove control characters)
+        // Helper to sanitize strings (remove control characters and convert UTF-8 to ASCII)
         auto sanitize = [](const char* input) -> String {
             String result = "";
-            for (size_t i = 0; input[i] != '\0'; i++) {
-                char c = input[i];
-                // Allow printable ASCII chars, space, and basic punctuation
-                if (c >= 32 && c < 127) {
-                    result += c;
+            const char* p = input;
+
+            while (*p) {
+                unsigned char c = *p;
+
+                // Single-byte ASCII character
+                if ((c & 0x80) == 0) {
+                    // Allow printable ASCII chars (space and above, excluding DEL)
+                    if (c >= 32 && c < 127) {
+                        result += (char)c;
+                    }
+                    p++;
                 }
+                // 2-byte UTF-8 sequence
+                else if ((c & 0xE0) == 0xC0 && *(p+1)) {
+                    unsigned char c1 = *p++;
+                    unsigned char c2 = *p++;
+
+                    // Czech characters: Ř/ř, Č/č, etc.
+                    if (c1 == 0xC5 && (c2 == 0x98 || c2 == 0x99)) result += 'R';  // Ř/ř
+                    else if (c1 == 0xC4 && (c2 == 0x8C || c2 == 0x8D)) result += 'C';  // Č/č
+                    else if (c1 == 0xC3 && c2 == 0xA1) result += 'a';  // á
+                    else if (c1 == 0xC3 && c2 == 0xA9) result += 'e';  // é
+                    else if (c1 == 0xC3 && c2 == 0xAD) result += 'i';  // í
+                    else if (c1 == 0xC3 && c2 == 0xB3) result += 'o';  // ó
+                    else if (c1 == 0xC3 && c2 == 0xBA) result += 'u';  // ú
+                    else if (c1 == 0xC3 && c2 == 0xBD) result += 'y';  // ý
+                    // Skip unknown accents
+                }
+                // Skip 3-byte and 4-byte UTF-8 sequences
+                else if ((c & 0xF0) == 0xE0 && *(p+1) && *(p+2)) p += 3;
+                else if ((c & 0xF8) == 0xF0 && *(p+1) && *(p+2) && *(p+3)) p += 4;
+                else p++;  // Skip invalid sequences
             }
+
             return result;
         };
 
