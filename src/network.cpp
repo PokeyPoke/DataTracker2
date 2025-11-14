@@ -223,6 +223,11 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             fetch('/api/modules', {headers: {'Authorization': token}})
             .then(r => {
                 if (r.status === 401) { logout(); return null; }
+                if (!r.ok) {
+                    return r.text().then(text => {
+                        throw new Error(`HTTP ${r.status}: ${text}`);
+                    });
+                }
                 return r.json();
             })
             .then(d => {
@@ -230,7 +235,10 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 modules = d.modules || [];
                 renderModules();
             })
-            .catch(e => showMessage('Failed to load modules', 'error'));
+            .catch(e => {
+                console.error('Load modules error:', e);
+                showMessage('Failed to load modules: ' + e.message, 'error');
+            });
         }
         function loadModuleTypes() {
             fetch('/api/module-types', {headers: {'Authorization': token}})
@@ -1493,7 +1501,24 @@ void NetworkManager::setupSettingsServer() {
         }
 
         String output;
-        serializeJson(response, output);
+        size_t len = serializeJson(response, output);
+
+        // Debug: Log response length and check for control characters
+        Serial.print("GET /api/modules - Response length: ");
+        Serial.print(len);
+        Serial.println(" bytes");
+
+        // Check for invalid characters
+        for (size_t i = 0; i < output.length(); i++) {
+            char c = output.charAt(i);
+            if (c < 32 && c != '\n' && c != '\r' && c != '\t') {
+                Serial.print("WARNING: Invalid control character at position ");
+                Serial.print(i);
+                Serial.print(": 0x");
+                Serial.println((int)c, HEX);
+            }
+        }
+
         server->send(200, "application/json", output);
     });
 
@@ -1531,20 +1556,33 @@ void NetworkManager::setupSettingsServer() {
         JsonObject newModule = config["modules"][moduleId].to<JsonObject>();
         newModule["type"] = moduleType;
 
+        // Helper to sanitize strings (remove control characters)
+        auto sanitize = [](const char* input) -> String {
+            String result = "";
+            for (size_t i = 0; input[i] != '\0'; i++) {
+                char c = input[i];
+                // Allow printable ASCII chars, space, and basic punctuation
+                if (c >= 32 && c < 127) {
+                    result += c;
+                }
+            }
+            return result;
+        };
+
         // Set default values based on type
         if (moduleType == "crypto") {
-            newModule["cryptoId"] = doc["cryptoId"] | "bitcoin";
-            newModule["cryptoSymbol"] = doc["cryptoSymbol"] | "BTC";
-            newModule["cryptoName"] = doc["cryptoName"] | "Bitcoin";
+            newModule["cryptoId"] = sanitize(doc["cryptoId"] | "bitcoin");
+            newModule["cryptoSymbol"] = sanitize(doc["cryptoSymbol"] | "BTC");
+            newModule["cryptoName"] = sanitize(doc["cryptoName"] | "Bitcoin");
             newModule["value"] = 0.0;
             newModule["change24h"] = 0.0;
         } else if (moduleType == "stock") {
-            newModule["ticker"] = doc["ticker"] | "AAPL";
-            newModule["name"] = doc["name"] | "Apple Inc.";
+            newModule["ticker"] = sanitize(doc["ticker"] | "AAPL");
+            newModule["name"] = sanitize(doc["name"] | "Apple Inc.");
             newModule["value"] = 0.0;
             newModule["change"] = 0.0;
         } else if (moduleType == "weather") {
-            newModule["location"] = doc["location"] | "San Francisco";
+            newModule["location"] = sanitize(doc["location"] | "San Francisco");
             newModule["latitude"] = doc["latitude"] | 37.7749;
             newModule["longitude"] = doc["longitude"] | -122.4194;
             newModule["temperature"] = 0.0;
@@ -1695,27 +1733,40 @@ void NetworkManager::setupSettingsServer() {
 
         String moduleType = module["type"] | "";
 
+        // Helper to sanitize strings (remove control characters)
+        auto sanitize = [](const char* input) -> String {
+            String result = "";
+            for (size_t i = 0; input[i] != '\0'; i++) {
+                char c = input[i];
+                // Allow printable ASCII chars, space, and basic punctuation
+                if (c >= 32 && c < 127) {
+                    result += c;
+                }
+            }
+            return result;
+        };
+
         // Update fields based on type
         if (moduleType == "crypto") {
-            if (doc.containsKey("cryptoId")) module["cryptoId"] = doc["cryptoId"];
-            if (doc.containsKey("cryptoSymbol")) module["cryptoSymbol"] = doc["cryptoSymbol"];
-            if (doc.containsKey("cryptoName")) module["cryptoName"] = doc["cryptoName"];
+            if (doc.containsKey("cryptoId")) module["cryptoId"] = sanitize(doc["cryptoId"]);
+            if (doc.containsKey("cryptoSymbol")) module["cryptoSymbol"] = sanitize(doc["cryptoSymbol"]);
+            if (doc.containsKey("cryptoName")) module["cryptoName"] = sanitize(doc["cryptoName"]);
         } else if (moduleType == "stock") {
-            if (doc.containsKey("ticker")) module["ticker"] = doc["ticker"];
-            if (doc.containsKey("name")) module["name"] = doc["name"];
+            if (doc.containsKey("ticker")) module["ticker"] = sanitize(doc["ticker"]);
+            if (doc.containsKey("name")) module["name"] = sanitize(doc["name"]);
         } else if (moduleType == "weather") {
-            if (doc.containsKey("location")) module["location"] = doc["location"];
+            if (doc.containsKey("location")) module["location"] = sanitize(doc["location"]);
             if (doc.containsKey("latitude")) module["latitude"] = doc["latitude"];
             if (doc.containsKey("longitude")) module["longitude"] = doc["longitude"];
         } else if (moduleType == "custom") {
-            if (doc.containsKey("label")) module["label"] = doc["label"];
+            if (doc.containsKey("label")) module["label"] = sanitize(doc["label"]);
             if (doc.containsKey("value")) module["value"] = doc["value"];
-            if (doc.containsKey("unit")) module["unit"] = doc["unit"];
+            if (doc.containsKey("unit")) module["unit"] = sanitize(doc["unit"]);
         } else if (moduleType == "quad") {
-            if (doc.containsKey("slot1")) module["slot1"] = doc["slot1"];
-            if (doc.containsKey("slot2")) module["slot2"] = doc["slot2"];
-            if (doc.containsKey("slot3")) module["slot3"] = doc["slot3"];
-            if (doc.containsKey("slot4")) module["slot4"] = doc["slot4"];
+            if (doc.containsKey("slot1")) module["slot1"] = sanitize(doc["slot1"]);
+            if (doc.containsKey("slot2")) module["slot2"] = sanitize(doc["slot2"]);
+            if (doc.containsKey("slot3")) module["slot3"] = sanitize(doc["slot3"]);
+            if (doc.containsKey("slot4")) module["slot4"] = sanitize(doc["slot4"]);
         }
 
         // Save configuration
