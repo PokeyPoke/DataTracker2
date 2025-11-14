@@ -22,6 +22,47 @@ void DisplayManager::clear() {
     u8g2.clearBuffer();
 }
 
+// Helper to convert UTF8 characters to ASCII (strip accents)
+String removeAccents(const char* input) {
+    String result = "";
+    const char* p = input;
+
+    while (*p) {
+        unsigned char c = *p;
+
+        // Check for UTF-8 multi-byte sequences
+        if ((c & 0x80) == 0) {
+            // Single-byte ASCII character
+            result += (char)c;
+            p++;
+        } else if ((c & 0xE0) == 0xC0) {
+            // 2-byte UTF-8 sequence
+            unsigned char c1 = *p++;
+            unsigned char c2 = *p++;
+
+            // Czech Ř (U+0158) = C5 98, ř (U+0159) = C5 99
+            if (c1 == 0xC5 && (c2 == 0x98 || c2 == 0x99)) {
+                result += 'R';  // Convert Ř/ř to R
+            }
+            // Czech Č (U+010C) = C4 8C, č (U+010D) = C4 8D
+            else if (c1 == 0xC4 && (c2 == 0x8C || c2 == 0x8D)) {
+                result += 'C';  // Convert Č/č to C
+            }
+            // Add more mappings as needed
+            else {
+                // Unknown accent, skip it
+            }
+        } else {
+            // Skip other multi-byte sequences
+            if ((c & 0xF0) == 0xE0) p += 3;      // 3-byte
+            else if ((c & 0xF8) == 0xF0) p += 4; // 4-byte
+            else p++;
+        }
+    }
+
+    return result;
+}
+
 void DisplayManager::drawCenteredText(const char* text, int y, const uint8_t* font) {
     u8g2.setFont(font);
     int width = u8g2.getStrWidth(text);
@@ -253,10 +294,11 @@ void DisplayManager::showWeather(float temp, const char* condition, const char* 
     int condWidth = u8g2.getStrWidth(condition);
     u8g2.drawStr((128 - condWidth) / 2, 46, condition);
 
-    // Location with UTF8 support for Czech accents
-    u8g2.setFont(u8g2_font_helvR08_tf);  // Supports extended Latin characters including Czech
-    int locWidth = u8g2.getUTF8Width(location);
-    u8g2.drawUTF8((128 - locWidth) / 2, 56, location);
+    // Location - strip accents for ASCII-only font (Říčany -> Ricany)
+    String cleanLocation = removeAccents(location);
+    u8g2.setFont(u8g2_font_6x10_tr);
+    int locWidth = u8g2.getStrWidth(cleanLocation.c_str());
+    u8g2.drawStr((128 - locWidth) / 2, 56, cleanLocation.c_str());
 
     // Status bar
     drawStatusBar(WiFi.isConnected(), lastUpdate, stale);
