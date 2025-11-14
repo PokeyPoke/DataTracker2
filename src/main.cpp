@@ -42,8 +42,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.11.1 ===");
-    Serial.println("Build: Full Module Display Updates - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.11.2 ===");
+    Serial.println("Build: Fixed Font Issues - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage

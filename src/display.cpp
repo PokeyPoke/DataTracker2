@@ -29,7 +29,7 @@ void DisplayManager::drawCenteredText(const char* text, int y, const uint8_t* fo
 }
 
 void DisplayManager::drawCenteredValue(const char* value, int y) {
-    u8g2.setFont(u8g2_font_logisoso24_tn);  // Large numeric font
+    u8g2.setFont(u8g2_font_logisoso24_tr);  // Large font with symbols (tr = transparent)
     int width = u8g2.getStrWidth(value);
     u8g2.drawStr((128 - width) / 2, y, value);
 }
@@ -253,8 +253,8 @@ void DisplayManager::showWeather(float temp, const char* condition, const char* 
     int condWidth = u8g2.getStrWidth(condition);
     u8g2.drawStr((128 - condWidth) / 2, 46, condition);
 
-    // Location with UTF8 support for accents
-    u8g2.setFont(u8g2_font_6x12_t_cyrillic);  // Supports extended characters including accents
+    // Location with UTF8 support for Czech accents
+    u8g2.setFont(u8g2_font_helvR08_tf);  // Supports extended Latin characters including Czech
     int locWidth = u8g2.getUTF8Width(location);
     u8g2.drawUTF8((128 - locWidth) / 2, 56, location);
 
