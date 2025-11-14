@@ -533,12 +533,20 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
         if (type == "crypto") {
             String symbol = module["cryptoSymbol"] | "?";
             float value = module["value"] | 0.0;
-            // Format with K for thousands
+            // Smart formatting based on value magnitude
             String valueStr;
             if (value >= 1000) {
+                // Large values: show in K format (e.g., "45K")
                 valueStr = String((int)(value / 1000)) + "K";
-            } else {
+            } else if (value >= 1) {
+                // Medium values: show as integer (e.g., "180")
                 valueStr = String((int)value);
+            } else if (value >= 0.01) {
+                // Small values: show 3 decimals (e.g., "0.123")
+                valueStr = String(value, 3);
+            } else {
+                // Very small values: show 5 decimals (e.g., "0.00012")
+                valueStr = String(value, 5);
             }
             return {symbol, valueStr};
         } else if (type == "stock") {
@@ -550,7 +558,7 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
             String location = module["location"] | "";
             // Abbreviate location to first 4 chars
             if (location.length() > 4) location = location.substring(0, 4);
-            return {location, String((int)temp) + "C"};
+            return {location, String((int)temp) + "\xB0"};
         } else if (type == "custom") {
             float value = module["value"] | 0.0;
             String label = module["label"] | "";
@@ -583,9 +591,9 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
         }
 
         // Large font for value in center
-        u8g2.setFont(u8g2_font_helvB12_tr);
+        u8g2.setFont(u8g2_font_helvB14_tr);
         int valueWidth = u8g2.getStrWidth(data.value.c_str());
-        u8g2.drawStr(x + (64 - valueWidth) / 2, y + 24, data.value.c_str());
+        u8g2.drawStr(x + (64 - valueWidth) / 2, y + 26, data.value.c_str());
     };
 
     // Draw all 4 quadrants
