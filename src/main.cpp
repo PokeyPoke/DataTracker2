@@ -51,8 +51,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.20-TIMEOUT-FIX ===");
-    Serial.println("Build: Fix Brightness Timeout Bug - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.21-DEBUG ===");
+    Serial.println("Build: Debug Brightness Timeout - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -231,15 +231,32 @@ void loop() {
     #endif
 
     // Check brightness mode timeout (only if we're in the mode and timer has been set)
-    if (brightnessMode && lastBrightnessActivity > 0 && (now - lastBrightnessActivity > BRIGHTNESS_TIMEOUT)) {
-        Serial.println("Brightness mode timeout - returning to modules");
-        brightnessMode = false;
-        lastBrightnessActivity = 0;  // Reset timer
-        // Save brightness setting
-        config["device"]["brightness"] = display.getBrightness();
-        saveConfiguration();
-        Serial.print("Brightness saved: ");
-        Serial.println(display.getBrightness());
+    if (brightnessMode) {
+        if (lastBrightnessActivity > 0) {
+            unsigned long elapsed = now - lastBrightnessActivity;
+            // Debug: print every 1000ms while in brightness mode
+            static unsigned long lastDebugPrint = 0;
+            if (now - lastDebugPrint > 1000) {
+                Serial.print("[BrightnessMode] elapsed=");
+                Serial.print(elapsed);
+                Serial.print("ms timeout=");
+                Serial.println(BRIGHTNESS_TIMEOUT);
+                lastDebugPrint = now;
+            }
+
+            if (elapsed > BRIGHTNESS_TIMEOUT) {
+                Serial.println("=== BRIGHTNESS TIMEOUT TRIGGERED ===");
+                brightnessMode = false;
+                lastBrightnessActivity = 0;  // Reset timer
+                // Save brightness setting
+                config["device"]["brightness"] = display.getBrightness();
+                saveConfiguration();
+                Serial.print("Brightness saved: ");
+                Serial.println(display.getBrightness());
+            }
+        } else {
+            Serial.println("[BrightnessMode ERROR] Timer not initialized!");
+        }
     }
 
     // Monitor WiFi connection
@@ -309,12 +326,17 @@ void handleButtonEvent(ButtonEvent event) {
 
             if (brightnessMode) {
                 // Entering brightness mode
-                Serial.println("Entered brightness mode");
-                display.cycleBrightness();  // Show current brightness
+                Serial.println("=== ENTERING BRIGHTNESS MODE ===");
+                Serial.print("brightnessMode = ");
+                Serial.println(brightnessMode);
+                Serial.print("Setting lastBrightnessActivity to: ");
+                Serial.println(millis());
                 lastBrightnessActivity = millis();  // Start timeout timer
+                display.cycleBrightness();  // Show current brightness
+                Serial.println("Brightness screen displayed");
             } else {
                 // Exiting brightness mode
-                Serial.println("Exited brightness mode");
+                Serial.println("=== EXITING BRIGHTNESS MODE ===");
                 lastBrightnessActivity = 0;  // Reset timer
                 // Save brightness setting
                 config["device"]["brightness"] = display.getBrightness();
