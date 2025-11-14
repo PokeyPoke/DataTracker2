@@ -522,9 +522,9 @@ void DisplayManager::setBrightness(uint8_t level) {
 }
 
 void DisplayManager::cycleBrightness() {
-    // Define 5 brightness levels from low to high
-    const uint8_t levels[] = {51, 102, 153, 204, 255};  // 20%, 40%, 60%, 80%, 100%
-    const int levelCount = 5;
+    // Define 9 brightness levels: 1%, 3%, 5%, 10%, 20%, 40%, 60%, 80%, 100%
+    const uint8_t levels[] = {3, 8, 13, 26, 51, 102, 153, 204, 255};
+    const int levelCount = 9;
 
     // Find current level index
     int currentIndex = -1;
@@ -547,10 +547,26 @@ void DisplayManager::cycleBrightness() {
         }
     }
 
-    // Cycle to next level (wrap around)
-    currentIndex = (currentIndex + 1) % levelCount;
-    currentBrightness = levels[currentIndex];
+    // Ping-pong logic: go high to low, then low to high
+    if (brightnessIncreasing) {
+        if (currentIndex >= levelCount - 1) {
+            // At max, reverse direction
+            brightnessIncreasing = false;
+            currentIndex--;
+        } else {
+            currentIndex++;
+        }
+    } else {
+        if (currentIndex <= 0) {
+            // At min, reverse direction
+            brightnessIncreasing = true;
+            currentIndex++;
+        } else {
+            currentIndex--;
+        }
+    }
 
+    currentBrightness = levels[currentIndex];
     setBrightness(currentBrightness);
 
     // Show brightness level on screen briefly
