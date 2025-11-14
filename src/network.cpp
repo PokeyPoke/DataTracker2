@@ -51,177 +51,617 @@ fetch('/scan').then(r=>r.json()).then(n=>{var s=document.getElementById('ssid');
 
 // Dynamic Settings page HTML (login + module management)
 const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
-<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Settings</title>
-<style>body{font-family:Arial;max-width:500px;margin:40px auto;padding:20px}
-.hidden{display:none}input,select{width:100%;padding:10px;margin:8px 0;box-sizing:border-box}
-button{background:#4CAF50;color:#fff;padding:12px;border:none;width:100%;margin-top:10px;cursor:pointer}
-button:hover{background:#45a049}.danger{background:#f44336}.danger:hover{background:#da190b}
-.code-input{font-size:24px;text-align:center;letter-spacing:10px}
-.error{color:#f44336;margin:10px 0}.success{color:#4CAF50;margin:10px 0}
-label{display:block;margin-top:15px;font-weight:bold}h2{text-align:center}
-.timer{text-align:center;color:#666;font-size:14px}
-.search-container{position:relative}.search-results{border:1px solid #ddd;max-height:200px;overflow-y:auto;margin-top:5px;display:none}
-.search-item{padding:10px;cursor:pointer;border-bottom:1px solid #eee;display:flex;align-items:center}
-.search-item:hover{background:#f5f5f5}.search-item img{width:24px;height:24px;margin-right:10px}
-.current-value{font-size:14px;color:#666;margin-top:5px}</style></head><body>
-<div id="login-view"><h2>DataTracker Settings</h2><p>Enter code from device display:</p>
-<input type="text" id="code" class="code-input" maxlength="6" placeholder="000000" pattern="[0-9]{6}">
-<button onclick="validateCode()">Unlock Settings</button><div id="error" class="error"></div>
-<p class="timer" id="timer"></p></div>
-<div id="settings-view" class="hidden"><h2>Settings</h2>
-<div style="text-align:right;margin-bottom:10px"><button onclick="logout()" style="width:auto;padding:8px 16px;font-size:12px">Logout</button></div>
-<label>Active Module:</label><select id="activeModule">
-<option value="bitcoin">Crypto 1</option><option value="ethereum">Crypto 2</option>
-<option value="stock">Stock</option><option value="weather">Weather</option>
-<option value="custom">Custom</option><option value="settings">Settings</option></select>
-<label>Crypto 1 (Bitcoin Module):</label>
-<div class="search-container">
-<input type="text" id="btcSearch" placeholder="Search cryptocurrency..." oninput="searchCrypto('bitcoin',this.value)">
-<div id="btcResults" class="search-results"></div>
-<div id="btcCurrent" class="current-value"></div>
-</div>
-<label>Crypto 2 (Ethereum Module):</label>
-<div class="search-container">
-<input type="text" id="ethSearch" placeholder="Search cryptocurrency..." oninput="searchCrypto('ethereum',this.value)">
-<div id="ethResults" class="search-results"></div>
-<div id="ethCurrent" class="current-value"></div>
-</div>
-<label>Stock Ticker:</label>
-<div class="search-container">
-<input type="text" id="stockSearch" placeholder="Search stocks..." oninput="searchStock(this.value)">
-<div id="stockResults" class="search-results"></div>
-<div id="stockCurrent" class="current-value"></div>
-</div>
-<label>Weather Location:</label>
-<div class="search-container">
-<input type="text" id="weatherSearch" placeholder="Search city..." oninput="searchWeather(this.value)">
-<div id="weatherResults" class="search-results"></div>
-<div id="weatherCurrent" class="current-value"></div>
-</div>
-<label>Custom Label:</label><input type="text" id="customLabel" placeholder="Label" maxlength="20">
-<label>Custom Value:</label><input type="number" id="customValue" step="0.01">
-<label>Custom Unit:</label><input type="text" id="customUnit" placeholder="Unit" maxlength="10">
-<div id="msg" style="margin:15px 0;padding:12px;border-radius:4px;text-align:center;font-weight:bold;display:none"></div>
-<button onclick="saveSettings()">Save Changes</button>
-<button onclick="restartDevice()" class="danger">Restart Device</button>
-<button onclick="factoryReset()" class="danger">Factory Reset</button>
-</div>
-<script>var token='';var searchTimeouts={};
-function validateCode(){var c=document.getElementById('code').value;
-if(c.length!=6){showError('Enter 6-digit code');return;}
-fetch('/api/validate',{method:'POST',body:JSON.stringify({code:parseInt(c)})})
-.then(r=>r.json()).then(d=>{if(d.valid){token=d.token;
-showSettings();}else{showError(d.error||'Invalid code');}}).catch(()=>showError('Connection error'));}
-function showSettings(){document.getElementById('login-view').className='hidden';
-document.getElementById('settings-view').className='';loadConfig();}
-function logout(){localStorage.removeItem('token');token='';
-document.getElementById('settings-view').className='hidden';
-document.getElementById('login-view').className='';
-document.getElementById('code').value='';
-document.getElementById('error').innerText='';}
-function handleUnauthorized(){logout();showError('Session expired. Please enter the code from your device.');}
-function loadConfig(){fetch('/api/config',{headers:{'Authorization':token}})
-.then(r=>{if(r.status===401){handleUnauthorized();return null;}if(!r.ok){throw new Error('Failed to load config');}return r.json();})
-.then(d=>{if(!d)return;document.getElementById('activeModule').value=d.device.activeModule||'bitcoin';
-window.bitcoin_config={cryptoId:d.modules.bitcoin.cryptoId||'bitcoin',cryptoSymbol:d.modules.bitcoin.cryptoSymbol||'BTC',cryptoName:d.modules.bitcoin.cryptoName||'Bitcoin'};
-window.ethereum_config={cryptoId:d.modules.ethereum.cryptoId||'ethereum',cryptoSymbol:d.modules.ethereum.cryptoSymbol||'ETH',cryptoName:d.modules.ethereum.cryptoName||'Ethereum'};
-window.stock_config={ticker:d.modules.stock.ticker||'AAPL',name:d.modules.stock.name||'Apple Inc.'};
-window.weather_config={location:d.modules.weather.location||'San Francisco',latitude:d.modules.weather.latitude||37.7749,longitude:d.modules.weather.longitude||-122.4194};
-updateCryptoDisplay('bitcoin',d.modules.bitcoin);updateCryptoDisplay('ethereum',d.modules.ethereum);
-updateStockDisplay(d.modules.stock);updateWeatherDisplay(d.modules.weather);
-document.getElementById('customLabel').value=d.modules.custom.label||'';
-document.getElementById('customValue').value=d.modules.custom.value||0;
-document.getElementById('customUnit').value=d.modules.custom.unit||'';})
-.catch(e=>{console.error('Load config error:',e);showMsg('Failed to load settings. Please try again.','error');});}
-function updateCryptoDisplay(module,data){var prefix=module==='bitcoin'?'btc':'eth';
-var cur=document.getElementById(prefix+'Current');
-if(data.cryptoName){cur.innerHTML='Current: '+data.cryptoName+' ('+data.cryptoSymbol.toUpperCase()+')';}else{cur.innerHTML='Current: '+(module==='bitcoin'?'Bitcoin (BTC)':'Ethereum (ETH)');}}
-function searchCrypto(module,query){clearTimeout(searchTimeouts[module]);
-if(query.length<2){hideResults(module);return;}
-var prefix=module==='bitcoin'?'btc':'eth';
-var results=document.getElementById(prefix+'Results');
-results.innerHTML='<div class="search-item">Searching...</div>';
-results.style.display='block';
-searchTimeouts[module]=setTimeout(()=>{
-fetch('https://api.coingecko.com/api/v3/search?query='+encodeURIComponent(query))
-.then(r=>r.json()).then(d=>{var html='';
-d.coins.slice(0,5).forEach(coin=>{html+='<div class="search-item" onclick="selectCrypto(\''+module+'\',\''+coin.id+'\',\''+coin.symbol+'\',\''+coin.name.replace(/'/g,"\\'")+'\')">';
-if(coin.thumb){html+='<img src="'+coin.thumb+'">';}
-html+=coin.name+' ('+coin.symbol.toUpperCase()+')</div>';});
-results.innerHTML=html||'<div class="search-item">No results</div>';}).catch(()=>{results.innerHTML='<div class="search-item">Error searching</div>';});},300);}
-function hideResults(module){var prefix=module==='bitcoin'?'btc':'eth';
-setTimeout(()=>{document.getElementById(prefix+'Results').style.display='none';},200);}
-function selectCrypto(module,id,symbol,name){var prefix=module==='bitcoin'?'btc':'eth';
-window[module+'_config']={cryptoId:id,cryptoSymbol:symbol,cryptoName:name};
-document.getElementById(prefix+'Search').value='';
-hideResults(module);updateCryptoDisplay(module,{cryptoName:name,cryptoSymbol:symbol});}
-function updateStockDisplay(data){var cur=document.getElementById('stockCurrent');
-if(data.name){cur.innerHTML='Current: '+data.name+' ('+data.ticker+')';}else{cur.innerHTML='Current: Apple Inc. (AAPL)';}}
-function searchStock(query){clearTimeout(searchTimeouts['stock']);
-query=query.trim();
-if(query.length<1){document.getElementById('stockResults').style.display='none';return;}
-var results=document.getElementById('stockResults');
-results.innerHTML='<div class="search-item">Searching...</div>';
-results.style.display='block';
-searchTimeouts['stock']=setTimeout(()=>{
-fetch('/api/stock-search?q='+encodeURIComponent(query))
-.then(r=>r.ok?r.json():Promise.reject('API error')).then(d=>{var html='';
-if(d.quotes&&d.quotes.length>0){d.quotes.filter(q=>q.quoteType==='EQUITY'||q.quoteType==='ETF').slice(0,5).forEach(q=>{
-html+='<div class="search-item" onclick="selectStock(\''+q.symbol.replace(/'/g,"\\'")+'\',\''+(q.shortname||q.longname||q.symbol).replace(/'/g,"\\'")+'\')">';
-html+=(q.shortname||q.longname||q.symbol)+' ('+q.symbol+')</div>';});}
-if(!html){html='<div class="search-item" onclick="selectStock(\''+query.toUpperCase().replace(/'/g,"\\'")+'\',\''+query.toUpperCase().replace(/'/g,"\\'")+'\')">';
-html+='Use "'+query.toUpperCase()+'" as ticker symbol</div>';}
-results.innerHTML=html;}).catch(e=>{console.error('Stock search error:',e);
-var ticker=query.toUpperCase();
-results.innerHTML='<div class="search-item" onclick="selectStock(\''+ticker.replace(/'/g,"\\'")+'\',\''+ticker.replace(/'/g,"\\'")+'\')">';
-results.innerHTML+='Search unavailable. Use "'+ticker+'" as ticker</div>';});},300);}
-function selectStock(ticker,name){window.stock_config={ticker:ticker.toUpperCase(),name:name};
-document.getElementById('stockSearch').value='';
-setTimeout(()=>{document.getElementById('stockResults').style.display='none';},200);
-updateStockDisplay({ticker:ticker.toUpperCase(),name:name});}
-function updateWeatherDisplay(data){var cur=document.getElementById('weatherCurrent');
-if(data.location){cur.innerHTML='Current: '+data.location+' ('+data.latitude+', '+data.longitude+')';}else{cur.innerHTML='Current: San Francisco';}}
-function searchWeather(query){clearTimeout(searchTimeouts['weather']);
-if(query.length<2){document.getElementById('weatherResults').style.display='none';return;}
-var results=document.getElementById('weatherResults');
-results.innerHTML='<div class="search-item">Searching...</div>';
-results.style.display='block';
-searchTimeouts['weather']=setTimeout(()=>{
-fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(query)+'&count=5&language=en&format=json')
-.then(r=>r.json()).then(d=>{var html='';
-if(d.results){d.results.forEach(city=>{
-html+='<div class="search-item" onclick="selectWeather(\''+city.name.replace(/'/g,"\\'")+'\','+city.latitude+','+city.longitude+',\''+(city.country||'').replace(/'/g,"\\'")+'\')">';
-html+=city.name+(city.admin1?', '+city.admin1:'')+(city.country?' ('+city.country+')':'')+'</div>';});}
-results.innerHTML=html||'<div class="search-item">No results</div>';}).catch(()=>{results.innerHTML='<div class="search-item">Error searching</div>';});},300);}
-function selectWeather(location,lat,lon,country){
-var cleanLocation=location.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-window.weather_config={location:cleanLocation,latitude:parseFloat(lat),longitude:parseFloat(lon)};
-console.log('Selected weather:',window.weather_config);
-document.getElementById('weatherSearch').value='';
-setTimeout(()=>{document.getElementById('weatherResults').style.display='none';},200);
-updateWeatherDisplay({location:cleanLocation,latitude:lat,longitude:lon});}
-function saveSettings(){var cfg={device:{activeModule:document.getElementById('activeModule').value},
-modules:{bitcoin:window.bitcoin_config||{},ethereum:window.ethereum_config||{},
-stock:window.stock_config||{ticker:'AAPL'},
-weather:window.weather_config||{location:'San Francisco',latitude:37.7749,longitude:-122.4194},
-custom:{label:document.getElementById('customLabel').value,value:parseFloat(document.getElementById('customValue').value)||0,
-unit:document.getElementById('customUnit').value}}};
-console.log('Saving config:',cfg);
-fetch('/api/config',{method:'POST',headers:{'Authorization':token,'Content-Type':'application/json;charset=utf-8'},body:JSON.stringify(cfg)})
-.then(r=>{if(r.status===401){handleUnauthorized();return null;}return r.json();})
-.then(d=>{if(!d)return;console.log('Save response:',d);if(d.success){showMsg('Settings Saved Successfully!','success');}else{showMsg('Save failed: '+(d.error||'Unknown error'),'error');}})
-.catch(e=>{console.error('Save error:',e);showMsg('Connection error','error');});}
-function restartDevice(){if(confirm('Restart device?')){fetch('/api/restart',{method:'POST',headers:{'Authorization':token}})
-.then(r=>{if(r.status===401){handleUnauthorized();return;}showMsg('Restarting...','success');});}}
-function factoryReset(){if(confirm('Factory reset? This will erase all settings!')){
-fetch('/api/factory-reset',{method:'POST',headers:{'Authorization':token}})
-.then(r=>{if(r.status===401){handleUnauthorized();return;}showMsg('Resetting...','success');});}}
-function showError(msg){document.getElementById('error').innerText=msg;}
-function showMsg(msg,type){var el=document.getElementById('msg');el.innerText=msg;
-el.style.display='block';
-if(type==='success'){el.style.background='#4CAF50';el.style.color='#fff';}else{el.style.background='#f44336';el.style.color='#fff';}
-setTimeout(()=>{el.style.display='none';el.innerText='';},3000);}
-localStorage.removeItem('token');</script></body></html>)rawliteral";
+<html>
+<head>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>DataTracker Settings</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; }
+        .header p { margin: 10px 0 0; opacity: 0.9; }
+        .content { padding: 30px; }
+        .hidden { display: none; }
+        .code-input { font-size: 32px; text-align: center; letter-spacing: 15px; width: 100%; padding: 15px; border: 2px solid #ddd; border-radius: 8px; }
+        button { background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; width: 100%; margin-top: 15px; transition: all 0.3s; }
+        button:hover { background: #5568d3; transform: translateY(-1px); }
+        button.secondary { background: #6c757d; }
+        button.danger { background: #dc3545; }
+        button.small { width: auto; padding: 8px 16px; font-size: 14px; }
+        .module-list { margin-top: 20px; }
+        .module-item { background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; align-items: center; cursor: move; transition: all 0.3s; }
+        .module-item:hover { border-color: #667eea; box-shadow: 0 2px 8px rgba(102,126,234,0.2); }
+        .module-item.dragging { opacity: 0.5; }
+        .module-icon { font-size: 32px; margin-right: 15px; }
+        .module-info { flex: 1; }
+        .module-name { font-weight: bold; font-size: 16px; margin: 0; }
+        .module-detail { color: #6c757d; font-size: 14px; margin: 5px 0 0; }
+        .module-actions { display: flex; gap: 8px; }
+        .module-actions button { width: auto; margin: 0; padding: 6px 12px; font-size: 13px; }
+        .add-module { margin-top: 20px; padding: 20px; background: #e7f3ff; border-radius: 8px; border: 2px dashed #667eea; }
+        .module-type-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 15px; }
+        .module-type { background: white; border: 2px solid #e9ecef; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .module-type:hover { border-color: #667eea; box-shadow: 0 2px 8px rgba(102,126,234,0.2); }
+        .module-type .icon { font-size: 32px; margin-bottom: 8px; }
+        .module-type .name { font-size: 14px; font-weight: 500; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal-header { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 8px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px; }
+        .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .form-actions button { flex: 1; }
+        .message { padding: 12px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; }
+        .message.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .message.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .search-container { position: relative; }
+        .search-results { border: 1px solid #ddd; border-radius: 8px; margin-top: 5px; max-height: 200px; overflow-y: auto; background: white; }
+        .search-item { padding: 10px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; align-items: center; }
+        .search-item:hover { background: #f5f5f5; }
+        .search-item:last-child { border-bottom: none; }
+        .search-item img { width: 24px; height: 24px; margin-right: 10px; border-radius: 50%; }
+        .text-center { text-align: center; }
+        .mt-20 { margin-top: 20px; }
+        .flex-end { display: flex; justify-content: flex-end; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>DataTracker</h1>
+            <p id="header-subtitle">Settings & Configuration</p>
+        </div>
+        <div id="login-view" class="content">
+            <p class="text-center">Enter code from device display:</p>
+            <input type="text" id="code" class="code-input" maxlength="6" placeholder="000000" pattern="[0-9]{6}">
+            <button onclick="validateCode()">Unlock Settings</button>
+            <div id="login-error" class="message error hidden"></div>
+        </div>
+        <div id="settings-view" class="content hidden">
+            <div class="flex-end" style="margin-bottom: 20px;">
+                <button class="small secondary" onclick="logout()">Logout</button>
+            </div>
+            <div id="message" class="message hidden"></div>
+            <h3>Active Modules</h3>
+            <p style="color: #6c757d; font-size: 14px;">Drag to reorder - Click Edit to configure</p>
+            <div id="module-list" class="module-list"></div>
+            <div class="add-module">
+                <h4 style="margin-top: 0;">Add New Module</h4>
+                <p style="color: #6c757d; font-size: 14px; margin-bottom: 15px;">Choose a module type to add:</p>
+                <div id="module-types" class="module-type-grid"></div>
+            </div>
+            <div class="mt-20">
+                <h3>Device Settings</h3>
+                <div class="form-group">
+                    <label>Currency:</label>
+                    <select id="currency">
+                        <option value="USD">US Dollar (USD)</option>
+                        <option value="EUR">Euro (EUR)</option>
+                        <option value="GBP">British Pound (GBP)</option>
+                        <option value="JPY">Japanese Yen (JPY)</option>
+                        <option value="CAD">Canadian Dollar (CAD)</option>
+                        <option value="AUD">Australian Dollar (AUD)</option>
+                        <option value="CHF">Swiss Franc (CHF)</option>
+                        <option value="CNY">Chinese Yuan (CNY)</option>
+                        <option value="INR">Indian Rupee (INR)</option>
+                        <option value="BRL">Brazilian Real (BRL)</option>
+                    </select>
+                </div>
+                <button onclick="saveCurrency()">Save Currency</button>
+            </div>
+            <div class="mt-20">
+                <button class="danger" onclick="restartDevice()">Restart Device</button>
+                <button class="danger" onclick="factoryReset()">Factory Reset</button>
+            </div>
+        </div>
+    </div>
+    <div id="module-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modal-title">Add Module</div>
+            <div id="modal-form"></div>
+            <div class="form-actions">
+                <button class="secondary" onclick="closeModal()">Cancel</button>
+                <button id="modal-save-btn" onclick="saveModule()">Save</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let token = '';
+        let modules = [];
+        let moduleTypes = [];
+        let currentModule = null;
+        let searchTimeout = null;
+        let draggedItem = null;
+        function validateCode() {
+            const code = document.getElementById('code').value;
+            if (code.length !== 6) {
+                showLoginError('Enter 6-digit code');
+                return;
+            }
+            fetch('/api/validate', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({code: parseInt(code)})
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.valid) {
+                    token = d.token;
+                    showSettings();
+                } else {
+                    showLoginError(d.error || 'Invalid code');
+                }
+            })
+            .catch(() => showLoginError('Connection error'));
+        }
+        function showLoginError(msg) {
+            const el = document.getElementById('login-error');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+        }
+        function showSettings() {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('settings-view').classList.remove('hidden');
+            loadSettings();
+        }
+        function logout() {
+            token = '';
+            document.getElementById('settings-view').classList.add('hidden');
+            document.getElementById('login-view').classList.remove('hidden');
+            document.getElementById('code').value = '';
+        }
+        function loadSettings() {
+            loadModules();
+            loadModuleTypes();
+            loadConfig();
+        }
+        function loadModules() {
+            fetch('/api/modules', {headers: {'Authorization': token}})
+            .then(r => {
+                if (r.status === 401) { logout(); return null; }
+                return r.json();
+            })
+            .then(d => {
+                if (!d) return;
+                modules = d.modules || [];
+                renderModules();
+            })
+            .catch(e => showMessage('Failed to load modules', 'error'));
+        }
+        function loadModuleTypes() {
+            fetch('/api/module-types', {headers: {'Authorization': token}})
+            .then(r => r.json())
+            .then(d => {
+                moduleTypes = d.types || [];
+                renderModuleTypes();
+            });
+        }
+        function loadConfig() {
+            fetch('/api/config', {headers: {'Authorization': token}})
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('currency').value = d.device.currency || 'USD';
+            });
+        }
+        function renderModules() {
+            const list = document.getElementById('module-list');
+            if (modules.length === 0) {
+                list.innerHTML = '<p style="text-align:center;color:#6c757d;padding:20px;">No modules yet. Add one below!</p>';
+                return;
+            }
+            list.innerHTML = modules.map((m, idx) => {
+                const icon = getModuleIcon(m.type);
+                const name = getModuleName(m);
+                const detail = getModuleDetail(m);
+                return `<div class="module-item" draggable="true" data-id="${m.id}">
+                    <div class="module-icon">${icon}</div>
+                    <div class="module-info">
+                        <div class="module-name">${name}</div>
+                        <div class="module-detail">${detail}</div>
+                    </div>
+                    <div class="module-actions">
+                        <button class="small" onclick="editModule('${m.id}')">Edit</button>
+                        <button class="small danger" onclick="deleteModule('${m.id}')">Delete</button>
+                    </div>
+                </div>`;
+            }).join('');
+            setupDragDrop();
+        }
+        function getModuleIcon(type) {
+            const icons = {crypto: 'B', stock: 'S', weather: 'W', custom: 'C', settings: 'S'};
+            return icons[type] || 'M';
+        }
+        function getModuleName(m) {
+            if (m.type === 'crypto') return m.cryptoName || m.cryptoSymbol || 'Crypto';
+            if (m.type === 'stock') return m.name || m.ticker || 'Stock';
+            if (m.type === 'weather') return m.location || 'Weather';
+            if (m.type === 'custom') return m.label || 'Custom';
+            if (m.type === 'settings') return 'Settings';
+            return m.id;
+        }
+        function getModuleDetail(m) {
+            if (m.type === 'crypto') return `${m.cryptoSymbol} - $${(m.value || 0).toFixed(2)}`;
+            if (m.type === 'stock') return `${m.ticker} - $${(m.value || 0).toFixed(2)}`;
+            if (m.type === 'weather') return `${(m.temperature || 0).toFixed(1)}C - ${m.condition || 'Unknown'}`;
+            if (m.type === 'custom') return `${(m.value || 0).toFixed(2)} ${m.unit || ''}`;
+            return 'Configuration module';
+        }
+        function setupDragDrop() {
+            const items = document.querySelectorAll('.module-item');
+            items.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+        }
+        function handleDragStart(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const afterElement = getDragAfterElement(this.parentNode, e.clientY);
+            if (afterElement == null) {
+                this.parentNode.appendChild(draggedItem);
+            } else {
+                this.parentNode.insertBefore(draggedItem, afterElement);
+            }
+        }
+        function handleDrop(e) {
+            e.stopPropagation();
+            return false;
+        }
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            saveModuleOrder();
+        }
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.module-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return {offset: offset, element: child};
+                } else {
+                    return closest;
+                }
+            }, {offset: Number.NEGATIVE_INFINITY}).element;
+        }
+        function saveModuleOrder() {
+            const items = document.querySelectorAll('.module-item');
+            const order = Array.from(items).map(item => item.getAttribute('data-id'));
+            fetch('/api/modules/order', {
+                method: 'POST',
+                headers: {'Authorization': token, 'Content-Type': 'application/json'},
+                body: JSON.stringify({order: order})
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    showMessage('Module order updated', 'success');
+                }
+            })
+            .catch(e => showMessage('Failed to update order', 'error'));
+        }
+        function renderModuleTypes() {
+            const grid = document.getElementById('module-types');
+            grid.innerHTML = moduleTypes.map(t => `
+                <div class="module-type" onclick="openAddModule('${t.id}')">
+                    <div class="icon">${t.icon}</div>
+                    <div class="name">${t.name}</div>
+                </div>
+            `).join('');
+        }
+        function openAddModule(type) {
+            currentModule = {type: type, id: generateModuleId(type)};
+            document.getElementById('modal-title').textContent = 'Add ' + moduleTypes.find(t => t.id === type).name;
+            renderModuleForm(type);
+            document.getElementById('module-modal').classList.add('active');
+        }
+        function editModule(id) {
+            currentModule = modules.find(m => m.id === id);
+            if (!currentModule) return;
+            const typeName = moduleTypes.find(t => t.id === currentModule.type)?.name || 'Module';
+            document.getElementById('modal-title').textContent = 'Edit ' + typeName;
+            renderModuleForm(currentModule.type, currentModule);
+            document.getElementById('module-modal').classList.add('active');
+        }
+        function generateModuleId(type) {
+            const existing = modules.filter(m => m.type === type).length;
+            return type + '_' + Date.now();
+        }
+        function renderModuleForm(type, data = {}) {
+            const form = document.getElementById('modal-form');
+            if (type === 'crypto') {
+                form.innerHTML = `
+                    <div class="form-group">
+                        <label>Search Cryptocurrency:</label>
+                        <div class="search-container">
+                            <input type="text" id="crypto-search" placeholder="Search..." oninput="searchCrypto(this.value)">
+                            <div id="crypto-results" class="search-results" style="display:none"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Crypto ID:</label>
+                        <input type="text" id="cryptoId" value="${data.cryptoId || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Symbol:</label>
+                        <input type="text" id="cryptoSymbol" value="${data.cryptoSymbol || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Name:</label>
+                        <input type="text" id="cryptoName" value="${data.cryptoName || ''}" readonly>
+                    </div>
+                `;
+            } else if (type === 'stock') {
+                form.innerHTML = `
+                    <div class="form-group">
+                        <label>Search Stock:</label>
+                        <div class="search-container">
+                            <input type="text" id="stock-search" placeholder="Search ticker..." oninput="searchStock(this.value)">
+                            <div id="stock-results" class="search-results" style="display:none"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Ticker Symbol:</label>
+                        <input type="text" id="ticker" value="${data.ticker || ''}" placeholder="AAPL">
+                    </div>
+                    <div class="form-group">
+                        <label>Company Name:</label>
+                        <input type="text" id="stockName" value="${data.name || ''}" placeholder="Apple Inc.">
+                    </div>
+                `;
+            } else if (type === 'weather') {
+                form.innerHTML = `
+                    <div class="form-group">
+                        <label>Search Location:</label>
+                        <div class="search-container">
+                            <input type="text" id="weather-search" placeholder="Search city..." oninput="searchWeather(this.value)">
+                            <div id="weather-results" class="search-results" style="display:none"></div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Location:</label>
+                        <input type="text" id="location" value="${data.location || ''}" placeholder="San Francisco">
+                    </div>
+                    <div class="form-group">
+                        <label>Latitude:</label>
+                        <input type="number" step="0.0001" id="latitude" value="${data.latitude || 37.7749}">
+                    </div>
+                    <div class="form-group">
+                        <label>Longitude:</label>
+                        <input type="number" step="0.0001" id="longitude" value="${data.longitude || -122.4194}">
+                    </div>
+                `;
+            } else if (type === 'custom') {
+                form.innerHTML = `
+                    <div class="form-group">
+                        <label>Label:</label>
+                        <input type="text" id="label" value="${data.label || ''}" placeholder="My Metric" maxlength="20">
+                    </div>
+                    <div class="form-group">
+                        <label>Value:</label>
+                        <input type="number" step="0.01" id="value" value="${data.value || 0}">
+                    </div>
+                    <div class="form-group">
+                        <label>Unit:</label>
+                        <input type="text" id="unit" value="${data.unit || ''}" placeholder="units" maxlength="10">
+                    </div>
+                `;
+            }
+        }
+        function searchCrypto(query) {
+            clearTimeout(searchTimeout);
+            if (query.length < 2) {
+                document.getElementById('crypto-results').style.display = 'none';
+                return;
+            }
+            const results = document.getElementById('crypto-results');
+            results.innerHTML = '<div class="search-item">Searching...</div>';
+            results.style.display = 'block';
+            searchTimeout = setTimeout(() => {
+                fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(d => {
+                    results.innerHTML = d.coins.slice(0,5).map(coin => `
+                        <div class="search-item" onclick="selectCrypto('${coin.id}', '${coin.symbol}', '${coin.name.replace(/'/g, "\\'")}')">
+                            ${coin.thumb ? `<img src="${coin.thumb}">` : ''}
+                            ${coin.name} (${coin.symbol.toUpperCase()})
+                        </div>
+                    `).join('') || '<div class="search-item">No results</div>';
+                })
+                .catch(() => results.innerHTML = '<div class="search-item">Error searching</div>');
+            }, 300);
+        }
+        function selectCrypto(id, symbol, name) {
+            document.getElementById('cryptoId').value = id;
+            document.getElementById('cryptoSymbol').value = symbol.toUpperCase();
+            document.getElementById('cryptoName').value = name;
+            document.getElementById('crypto-search').value = '';
+            document.getElementById('crypto-results').style.display = 'none';
+        }
+        function searchStock(query) {
+            clearTimeout(searchTimeout);
+            if (query.length < 1) {
+                document.getElementById('stock-results').style.display = 'none';
+                return;
+            }
+            const results = document.getElementById('stock-results');
+            results.innerHTML = '<div class="search-item">Searching...</div>';
+            results.style.display = 'block';
+            searchTimeout = setTimeout(() => {
+                fetch(`/api/stock-search?q=${encodeURIComponent(query)}`)
+                .then(r => r.json())
+                .then(d => {
+                    if (d.quotes && d.quotes.length > 0) {
+                        results.innerHTML = d.quotes.filter(q => q.quoteType === 'EQUITY' || q.quoteType === 'ETF').slice(0,5).map(q => `
+                            <div class="search-item" onclick="selectStock('${q.symbol}', '${(q.shortname || q.longname || q.symbol).replace(/'/g, "\\'")}')">
+                                ${q.shortname || q.longname || q.symbol} (${q.symbol})
+                            </div>
+                        `).join('') || `<div class="search-item" onclick="selectStock('${query.toUpperCase()}', '${query.toUpperCase()}')">Use "${query.toUpperCase()}" as ticker</div>`;
+                    } else {
+                        results.innerHTML = `<div class="search-item" onclick="selectStock('${query.toUpperCase()}', '${query.toUpperCase()}')">Use "${query.toUpperCase()}" as ticker</div>`;
+                    }
+                })
+                .catch(() => {
+                    const ticker = query.toUpperCase();
+                    results.innerHTML = `<div class="search-item" onclick="selectStock('${ticker}', '${ticker}')">Use "${ticker}" as ticker</div>`;
+                });
+            }, 300);
+        }
+        function selectStock(ticker, name) {
+            document.getElementById('ticker').value = ticker.toUpperCase();
+            document.getElementById('stockName').value = name;
+            document.getElementById('stock-search').value = '';
+            document.getElementById('stock-results').style.display = 'none';
+        }
+        function searchWeather(query) {
+            clearTimeout(searchTimeout);
+            if (query.length < 2) {
+                document.getElementById('weather-results').style.display = 'none';
+                return;
+            }
+            const results = document.getElementById('weather-results');
+            results.innerHTML = '<div class="search-item">Searching...</div>';
+            results.style.display = 'block';
+            searchTimeout = setTimeout(() => {
+                fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`)
+                .then(r => r.json())
+                .then(d => {
+                    results.innerHTML = (d.results || []).map(city => `
+                        <div class="search-item" onclick="selectWeather('${city.name.replace(/'/g, "\\'")}', ${city.latitude}, ${city.longitude})">
+                            ${city.name}${city.admin1 ? ', ' + city.admin1 : ''}${city.country ? ' (' + city.country + ')' : ''}
+                        </div>
+                    `).join('') || '<div class="search-item">No results</div>';
+                })
+                .catch(() => results.innerHTML = '<div class="search-item">Error searching</div>');
+            }, 300);
+        }
+        function selectWeather(location, lat, lon) {
+            document.getElementById('location').value = location;
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lon;
+            document.getElementById('weather-search').value = '';
+            document.getElementById('weather-results').style.display = 'none';
+        }
+        function saveModule() {
+            const type = currentModule.type;
+            const isNew = !modules.find(m => m.id === currentModule.id);
+            let data = {id: currentModule.id, type: type};
+            if (type === 'crypto') {
+                data.cryptoId = document.getElementById('cryptoId').value;
+                data.cryptoSymbol = document.getElementById('cryptoSymbol').value;
+                data.cryptoName = document.getElementById('cryptoName').value;
+                if (!data.cryptoId) { showMessage('Please search and select a cryptocurrency', 'error'); return; }
+            } else if (type === 'stock') {
+                data.ticker = document.getElementById('ticker').value;
+                data.name = document.getElementById('stockName').value;
+                if (!data.ticker) { showMessage('Please enter a ticker symbol', 'error'); return; }
+            } else if (type === 'weather') {
+                data.location = document.getElementById('location').value;
+                data.latitude = parseFloat(document.getElementById('latitude').value);
+                data.longitude = parseFloat(document.getElementById('longitude').value);
+                if (!data.location) { showMessage('Please enter a location', 'error'); return; }
+            } else if (type === 'custom') {
+                data.label = document.getElementById('label').value;
+                data.value = parseFloat(document.getElementById('value').value) || 0;
+                data.unit = document.getElementById('unit').value;
+                if (!data.label) { showMessage('Please enter a label', 'error'); return; }
+            }
+            const url = isNew ? '/api/modules' : '/api/modules/update';
+            fetch(url, {
+                method: 'POST',
+                headers: {'Authorization': token, 'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success || d.id) {
+                    closeModal();
+                    loadModules();
+                    showMessage(isNew ? 'Module added successfully' : 'Module updated successfully', 'success');
+                } else {
+                    showMessage(d.error || 'Failed to save module', 'error');
+                }
+            })
+            .catch(e => showMessage('Failed to save module', 'error'));
+        }
+        function deleteModule(id) {
+            if (!confirm('Are you sure you want to delete this module?')) return;
+            fetch('/api/modules/delete', {
+                method: 'POST',
+                headers: {'Authorization': token, 'Content-Type': 'application/json'},
+                body: JSON.stringify({id: id})
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    loadModules();
+                    showMessage('Module deleted', 'success');
+                } else {
+                    showMessage(d.error || 'Failed to delete module', 'error');
+                }
+            })
+            .catch(e => showMessage('Failed to delete module', 'error'));
+        }
+        function saveCurrency() {
+            const currency = document.getElementById('currency').value;
+            fetch('/api/config', {
+                method: 'POST',
+                headers: {'Authorization': token, 'Content-Type': 'application/json'},
+                body: JSON.stringify({device: {currency: currency}})
+            })
+            .then(r => r.json())
+            .then(d => showMessage('Currency saved', 'success'))
+            .catch(e => showMessage('Failed to save currency', 'error'));
+        }
+        function restartDevice() {
+            if (!confirm('Restart device? This will disconnect you.')) return;
+            fetch('/api/restart', {
+                method: 'POST',
+                headers: {'Authorization': token}
+            })
+            .then(() => {
+                showMessage('Device restarting...', 'success');
+                setTimeout(logout, 2000);
+            })
+            .catch(e => showMessage('Failed to restart', 'error'));
+        }
+        function factoryReset() {
+            if (!confirm('Factory reset? This will erase ALL settings and data!')) return;
+            if (!confirm('Are you ABSOLUTELY sure? This cannot be undone!')) return;
+            fetch('/api/factory-reset', {
+                method: 'POST',
+                headers: {'Authorization': token}
+            })
+            .then(() => {
+                showMessage('Factory reset initiated...', 'success');
+                setTimeout(logout, 2000);
+            })
+            .catch(e => showMessage('Failed to reset', 'error'));
+        }
+        function closeModal() {
+            document.getElementById('module-modal').classList.remove('active');
+            currentModule = null;
+        }
+        function showMessage(msg, type = 'success') {
+            const el = document.getElementById('message');
+            el.textContent = msg;
+            el.className = `message ${type}`;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 5000);
+        }
+    </script>
+</body>
+</html>)rawliteral";
 
 NetworkManager::NetworkManager()
     : server(nullptr), isAPMode(false), isSettingsMode(false), lastReconnectAttempt(0),
