@@ -51,8 +51,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.24-NO-TIMEOUT ===");
-    Serial.println("Build: Brightness Manual Exit Only - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.25-BRIGHTNESS-FINAL ===");
+    Serial.println("Build: Brightness with Working Timeout - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -230,15 +230,19 @@ void loop() {
     }
     #endif
 
-    // Brightness mode timeout disabled for now - manual exit only
-    // TODO: Re-enable after debugging
-    // if (brightnessMode && lastBrightnessActivity > 0 && (now - lastBrightnessActivity > BRIGHTNESS_TIMEOUT)) {
-    //     Serial.println("Brightness timeout - exiting");
-    //     brightnessMode = false;
-    //     lastBrightnessActivity = 0;
-    //     config["device"]["brightness"] = display.getBrightness();
-    //     saveConfiguration();
-    // }
+    // Brightness mode timeout - exit after 7 seconds of no activity
+    if (brightnessMode) {
+        if (lastBrightnessActivity > 0) {
+            unsigned long elapsed = now - lastBrightnessActivity;
+            if (elapsed > BRIGHTNESS_TIMEOUT) {
+                Serial.println("Brightness timeout - saving and exiting");
+                brightnessMode = false;
+                lastBrightnessActivity = 0;
+                config["device"]["brightness"] = display.getBrightness();
+                saveConfiguration();
+            }
+        }
+    }
 
     // Monitor WiFi connection
     if (!network.isConnected()) {
@@ -297,11 +301,8 @@ void handleButtonEvent(ButtonEvent event) {
         case SHORT_PRESS:
             if (brightnessMode) {
                 // In brightness mode: cycle brightness level
-                Serial.println("SHORT_PRESS in brightness mode");
                 display.cycleBrightness();
-                lastBrightnessActivity = millis();
-                Serial.print("Timer reset to: ");
-                Serial.println(lastBrightnessActivity);
+                lastBrightnessActivity = millis();  // Reset 7s timeout
             } else {
                 // Normal mode: cycle to next module
                 cycleToNextModule();
