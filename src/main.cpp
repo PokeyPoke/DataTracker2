@@ -42,8 +42,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.8.0 ===");
-    Serial.println("Build: Dynamic Module Factory - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.9.0 ===");
+    Serial.println("Build: Dynamic Module Management + Quad Screen - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage

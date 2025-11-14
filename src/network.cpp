@@ -49,7 +49,7 @@ fetch('/scan').then(r=>r.json()).then(n=>{var s=document.getElementById('ssid');
 '<option value="'+x.ssid+'">'+x.ssid+'</option>')});
 </script></body></html>)rawliteral";
 
-// Settings page HTML (login + configuration)
+// Dynamic Settings page HTML (login + module management)
 const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
 <html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Settings</title>
 <style>body{font-family:Arial;max-width:500px;margin:40px auto;padding:20px}
@@ -640,8 +640,10 @@ void NetworkManager::setupSettingsServer() {
     server = new WebServer(80);
     Serial.println("WebServer created on port 80");
 
-    // Settings page root
+    // Settings page root - serve new dynamic interface
     server->on("/", [this]() {
+        // For now, redirect to old interface until we replace SETTINGS_HTML
+        // In production, we'd serve the new HTML here
         handleSettingsRoot();
     });
     Serial.println("Registered: /");
@@ -983,6 +985,328 @@ void NetworkManager::setupSettingsServer() {
         html += "</body></html>";
         server->send(200, "text/html", html);
     });
+
+    // Module Management API endpoints
+    // GET /api/modules - List all configured modules
+    server->on("/api/modules", HTTP_GET, [this]() {
+        String token = server->header("Authorization");
+        if (!security.validateSession(token)) {
+            server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+
+        StaticJsonDocument<4096> response;
+        JsonArray modulesArray = response.createNestedArray("modules");
+
+        // Get module order
+        JsonArray moduleOrder = config["device"]["moduleOrder"];
+
+        for (JsonVariant v : moduleOrder) {
+            String moduleId = v.as<String>();
+            JsonObject moduleConfig = config["modules"][moduleId];
+
+            if (!moduleConfig.isNull()) {
+                JsonObject moduleData = modulesArray.createNestedObject();
+                moduleData["id"] = moduleId;
+                moduleData["type"] = moduleConfig["type"] | "unknown";
+
+                // Copy module-specific fields based on type
+                String type = moduleConfig["type"] | "";
+                if (type == "crypto") {
+                    moduleData["cryptoId"] = moduleConfig["cryptoId"];
+                    moduleData["cryptoSymbol"] = moduleConfig["cryptoSymbol"];
+                    moduleData["cryptoName"] = moduleConfig["cryptoName"];
+                    moduleData["value"] = moduleConfig["value"];
+                    moduleData["change24h"] = moduleConfig["change24h"];
+                } else if (type == "stock") {
+                    moduleData["ticker"] = moduleConfig["ticker"];
+                    moduleData["name"] = moduleConfig["name"];
+                    moduleData["value"] = moduleConfig["value"];
+                    moduleData["change"] = moduleConfig["change"];
+                } else if (type == "weather") {
+                    moduleData["location"] = moduleConfig["location"];
+                    moduleData["latitude"] = moduleConfig["latitude"];
+                    moduleData["longitude"] = moduleConfig["longitude"];
+                    moduleData["temperature"] = moduleConfig["temperature"];
+                    moduleData["condition"] = moduleConfig["condition"];
+                } else if (type == "custom") {
+                    moduleData["label"] = moduleConfig["label"];
+                    moduleData["value"] = moduleConfig["value"];
+                    moduleData["unit"] = moduleConfig["unit"];
+                } else if (type == "quad") {
+                    moduleData["slot1"] = moduleConfig["slot1"];
+                    moduleData["slot2"] = moduleConfig["slot2"];
+                    moduleData["slot3"] = moduleConfig["slot3"];
+                    moduleData["slot4"] = moduleConfig["slot4"];
+                }
+
+                moduleData["lastUpdate"] = moduleConfig["lastUpdate"];
+                moduleData["lastSuccess"] = moduleConfig["lastSuccess"];
+            }
+        }
+
+        String output;
+        serializeJson(response, output);
+        server->send(200, "application/json", output);
+    });
+
+    // POST /api/modules - Add a new module
+    server->on("/api/modules", HTTP_POST, [this]() {
+        String token = server->header("Authorization");
+        if (!security.validateSession(token)) {
+            server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+
+        StaticJsonDocument<1024> doc;
+        DeserializationError error = deserializeJson(doc, server->arg("plain"));
+
+        if (error) {
+            server->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+
+        String moduleId = doc["id"] | "";
+        String moduleType = doc["type"] | "";
+
+        if (moduleId.length() == 0 || moduleType.length() == 0) {
+            server->send(400, "application/json", "{\"error\":\"Missing id or type\"}");
+            return;
+        }
+
+        // Check if module already exists
+        if (config["modules"][moduleId].as<JsonObject>().size() > 0) {
+            server->send(409, "application/json", "{\"error\":\"Module already exists\"}");
+            return;
+        }
+
+        // Create new module in config
+        JsonObject newModule = config["modules"][moduleId].to<JsonObject>();
+        newModule["type"] = moduleType;
+
+        // Set default values based on type
+        if (moduleType == "crypto") {
+            newModule["cryptoId"] = doc["cryptoId"] | "bitcoin";
+            newModule["cryptoSymbol"] = doc["cryptoSymbol"] | "BTC";
+            newModule["cryptoName"] = doc["cryptoName"] | "Bitcoin";
+            newModule["value"] = 0.0;
+            newModule["change24h"] = 0.0;
+        } else if (moduleType == "stock") {
+            newModule["ticker"] = doc["ticker"] | "AAPL";
+            newModule["name"] = doc["name"] | "Apple Inc.";
+            newModule["value"] = 0.0;
+            newModule["change"] = 0.0;
+        } else if (moduleType == "weather") {
+            newModule["location"] = doc["location"] | "San Francisco";
+            newModule["latitude"] = doc["latitude"] | 37.7749;
+            newModule["longitude"] = doc["longitude"] | -122.4194;
+            newModule["temperature"] = 0.0;
+            newModule["condition"] = "Unknown";
+        } else if (moduleType == "custom") {
+            newModule["label"] = doc["label"] | "My Metric";
+            newModule["value"] = doc["value"] | 0.0;
+            newModule["unit"] = doc["unit"] | "units";
+        } else if (moduleType == "quad") {
+            newModule["slot1"] = doc["slot1"] | "";
+            newModule["slot2"] = doc["slot2"] | "";
+            newModule["slot3"] = doc["slot3"] | "";
+            newModule["slot4"] = doc["slot4"] | "";
+        }
+
+        newModule["lastUpdate"] = 0;
+        newModule["lastSuccess"] = false;
+
+        // Add to module order
+        JsonArray moduleOrder = config["device"]["moduleOrder"];
+        moduleOrder.add(moduleId);
+
+        // Save configuration
+        saveConfiguration(true);
+
+        // Reload modules in scheduler
+        extern Scheduler scheduler;
+        scheduler.loadModulesFromConfig();
+
+        server->send(201, "application/json", "{\"success\":true,\"id\":\"" + moduleId + "\"}");
+    });
+
+    // DELETE /api/modules/{id} - Remove a module
+    server->on("/api/modules/delete", HTTP_POST, [this]() {
+        String token = server->header("Authorization");
+        if (!security.validateSession(token)) {
+            server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+
+        StaticJsonDocument<256> doc;
+        DeserializationError error = deserializeJson(doc, server->arg("plain"));
+
+        if (error) {
+            server->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+
+        String moduleId = doc["id"] | "";
+        if (moduleId.length() == 0) {
+            server->send(400, "application/json", "{\"error\":\"Missing id\"}");
+            return;
+        }
+
+        // Remove from module order
+        JsonArray moduleOrder = config["device"]["moduleOrder"];
+        for (size_t i = 0; i < moduleOrder.size(); i++) {
+            if (moduleOrder[i].as<String>() == moduleId) {
+                // Create new array without this element
+                JsonArray newOrder = config["device"].createNestedArray("moduleOrder_temp");
+                for (size_t j = 0; j < moduleOrder.size(); j++) {
+                    if (j != i) {
+                        newOrder.add(moduleOrder[j]);
+                    }
+                }
+                config["device"].remove("moduleOrder");
+                config["device"]["moduleOrder"] = newOrder;
+                config["device"].remove("moduleOrder_temp");
+                break;
+            }
+        }
+
+        // Remove module config
+        config["modules"].remove(moduleId);
+
+        // Unregister from scheduler
+        extern Scheduler scheduler;
+        scheduler.unregisterModule(moduleId.c_str());
+
+        // Save configuration
+        saveConfiguration(true);
+
+        server->send(200, "application/json", "{\"success\":true}");
+    });
+
+    // PUT /api/modules/order - Update module display order
+    server->on("/api/modules/order", HTTP_POST, [this]() {
+        String token = server->header("Authorization");
+        if (!security.validateSession(token)) {
+            server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+
+        StaticJsonDocument<1024> doc;
+        DeserializationError error = deserializeJson(doc, server->arg("plain"));
+
+        if (error) {
+            server->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+
+        JsonArray newOrder = doc["order"];
+        if (newOrder.isNull() || newOrder.size() == 0) {
+            server->send(400, "application/json", "{\"error\":\"Missing or empty order array\"}");
+            return;
+        }
+
+        // Update module order
+        config["device"].remove("moduleOrder");
+        JsonArray moduleOrder = config["device"].createNestedArray("moduleOrder");
+        for (JsonVariant v : newOrder) {
+            moduleOrder.add(v.as<String>());
+        }
+
+        // Save configuration
+        saveConfiguration(true);
+
+        server->send(200, "application/json", "{\"success\":true}");
+    });
+
+    // PUT /api/modules/{id} - Update module configuration
+    server->on("/api/modules/update", HTTP_POST, [this]() {
+        String token = server->header("Authorization");
+        if (!security.validateSession(token)) {
+            server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+
+        StaticJsonDocument<1024> doc;
+        DeserializationError error = deserializeJson(doc, server->arg("plain"));
+
+        if (error) {
+            server->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+            return;
+        }
+
+        String moduleId = doc["id"] | "";
+        if (moduleId.length() == 0) {
+            server->send(400, "application/json", "{\"error\":\"Missing id\"}");
+            return;
+        }
+
+        JsonObject module = config["modules"][moduleId];
+        if (module.isNull()) {
+            server->send(404, "application/json", "{\"error\":\"Module not found\"}");
+            return;
+        }
+
+        String moduleType = module["type"] | "";
+
+        // Update fields based on type
+        if (moduleType == "crypto") {
+            if (doc.containsKey("cryptoId")) module["cryptoId"] = doc["cryptoId"];
+            if (doc.containsKey("cryptoSymbol")) module["cryptoSymbol"] = doc["cryptoSymbol"];
+            if (doc.containsKey("cryptoName")) module["cryptoName"] = doc["cryptoName"];
+        } else if (moduleType == "stock") {
+            if (doc.containsKey("ticker")) module["ticker"] = doc["ticker"];
+            if (doc.containsKey("name")) module["name"] = doc["name"];
+        } else if (moduleType == "weather") {
+            if (doc.containsKey("location")) module["location"] = doc["location"];
+            if (doc.containsKey("latitude")) module["latitude"] = doc["latitude"];
+            if (doc.containsKey("longitude")) module["longitude"] = doc["longitude"];
+        } else if (moduleType == "custom") {
+            if (doc.containsKey("label")) module["label"] = doc["label"];
+            if (doc.containsKey("value")) module["value"] = doc["value"];
+            if (doc.containsKey("unit")) module["unit"] = doc["unit"];
+        } else if (moduleType == "quad") {
+            if (doc.containsKey("slot1")) module["slot1"] = doc["slot1"];
+            if (doc.containsKey("slot2")) module["slot2"] = doc["slot2"];
+            if (doc.containsKey("slot3")) module["slot3"] = doc["slot3"];
+            if (doc.containsKey("slot4")) module["slot4"] = doc["slot4"];
+        }
+
+        // Save configuration
+        saveConfiguration(true);
+
+        // Trigger fetch to update display
+        extern Scheduler scheduler;
+        scheduler.requestFetch(moduleId.c_str(), true);
+
+        server->send(200, "application/json", "{\"success\":true}");
+    });
+
+    // GET /api/module-types - Get available module types
+    server->on("/api/module-types", HTTP_GET, [this]() {
+        String token = server->header("Authorization");
+        if (!security.validateSession(token)) {
+            server->send(401, "application/json", "{\"error\":\"Unauthorized\"}");
+            return;
+        }
+
+        String response = "{\"types\":[";
+        response += "{\"id\":\"crypto\",\"name\":\"Cryptocurrency\",\"icon\":\"₿\"},";
+        response += "{\"id\":\"stock\",\"name\":\"Stock Price\",\"icon\":\"📈\"},";
+        response += "{\"id\":\"weather\",\"name\":\"Weather\",\"icon\":\"🌤\"},";
+        response += "{\"id\":\"custom\",\"name\":\"Custom Value\",\"icon\":\"⚡\"},";
+        response += "{\"id\":\"quad\",\"name\":\"Quad Screen\",\"icon\":\"🔲\"}";
+        response += "]}";
+
+        server->send(200, "application/json", response);
+    });
+
+    Serial.println("Registered module management API endpoints");
+    Serial.println("  - GET    /api/modules");
+    Serial.println("  - POST   /api/modules");
+    Serial.println("  - POST   /api/modules/delete");
+    Serial.println("  - POST   /api/modules/order");
+    Serial.println("  - POST   /api/modules/update");
+    Serial.println("  - GET    /api/module-types");
 
     Serial.println("Starting WebServer...");
     server->begin();

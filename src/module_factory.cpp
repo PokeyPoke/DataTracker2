@@ -425,6 +425,81 @@ public:
 };
 
 // ============================================================================
+// Quad Screen Module (displays 4 values in 2x2 grid)
+// ============================================================================
+class QuadScreenModule : public ModuleInterface {
+private:
+    String moduleId;
+
+public:
+    QuadScreenModule(const char* id, JsonObject cfg) {
+        moduleId = String(id);
+        this->id = moduleId.c_str();
+        displayName = "Quad Screen";
+        defaultRefreshInterval = 60;   // 1 minute
+        minRefreshInterval = 30;       // 30 seconds
+    }
+
+    bool fetch(String& errorMsg) override {
+        // Quad module doesn't fetch - it aggregates data from other modules
+        // Update timestamp to show it's active
+        JsonObject data = config["modules"][moduleId];
+        data["lastUpdate"] = millis() / 1000;
+        data["lastSuccess"] = true;
+        return true;
+    }
+
+    String formatDisplay() override {
+        JsonObject data = config["modules"][moduleId];
+
+        // Get the 4 module IDs to display
+        String slot1 = data["slot1"] | "";
+        String slot2 = data["slot2"] | "";
+        String slot3 = data["slot3"] | "";
+        String slot4 = data["slot4"] | "";
+
+        // Get values from referenced modules
+        String val1 = getModuleValue(slot1);
+        String val2 = getModuleValue(slot2);
+        String val3 = getModuleValue(slot3);
+        String val4 = getModuleValue(slot4);
+
+        // Format for 2x2 grid display
+        // This will be rendered specially by the display manager
+        return "QUAD:" + val1 + "|" + val2 + "|" + val3 + "|" + val4;
+    }
+
+private:
+    String getModuleValue(String moduleId) {
+        if (moduleId.length() == 0) return "---";
+
+        JsonObject module = config["modules"][moduleId];
+        if (module.isNull()) return "N/A";
+
+        String type = module["type"] | "";
+
+        if (type == "crypto") {
+            String symbol = module["cryptoSymbol"] | "?";
+            float value = module["value"] | 0.0;
+            return symbol + ":" + String(value, 0);
+        } else if (type == "stock") {
+            String ticker = module["ticker"] | "?";
+            float value = module["value"] | 0.0;
+            return ticker + ":" + String(value, 0);
+        } else if (type == "weather") {
+            float temp = module["temperature"] | 0.0;
+            return String(temp, 0) + "°C";
+        } else if (type == "custom") {
+            float value = module["value"] | 0.0;
+            String unit = module["unit"] | "";
+            return String(value, 1) + unit;
+        }
+
+        return "---";
+    }
+};
+
+// ============================================================================
 // Module Factory Implementation
 // ============================================================================
 
@@ -439,6 +514,8 @@ ModuleInterface* ModuleFactory::createModule(const char* type, const char* id, J
         return new GenericWeatherModule(id, config);
     } else if (typeStr == "custom") {
         return new GenericCustomModule(id, config);
+    } else if (typeStr == "quad") {
+        return new QuadScreenModule(id, config);
     } else if (typeStr == "settings") {
         return new GenericSettingsModule(id, config);
     }
@@ -456,6 +533,7 @@ const char* ModuleFactory::getModuleTypeName(const char* type) {
     if (typeStr == "stock") return "Stock Price";
     if (typeStr == "weather") return "Weather";
     if (typeStr == "custom") return "Custom Value";
+    if (typeStr == "quad") return "Quad Screen";
     if (typeStr == "settings") return "Settings";
 
     return "Unknown";
@@ -464,5 +542,5 @@ const char* ModuleFactory::getModuleTypeName(const char* type) {
 bool ModuleFactory::isValidModuleType(const char* type) {
     String typeStr = String(type);
     return (typeStr == "crypto" || typeStr == "stock" || typeStr == "weather" ||
-            typeStr == "custom" || typeStr == "settings");
+            typeStr == "custom" || typeStr == "quad" || typeStr == "settings");
 }
