@@ -559,7 +559,7 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
             String unit = module["unit"] | "C";
             // Abbreviate location to first 4 chars
             if (location.length() > 4) location = location.substring(0, 4);
-            return {location, String((int)temp) + "°" + unit};
+            return {location, String(temp, 1) + "°" + unit};
         } else if (type == "custom") {
             float value = module["value"] | 0.0;
             String label = module["label"] | "";

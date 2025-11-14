@@ -42,8 +42,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.10.7 ===");
-    Serial.println("Build: Fixed Weather Display - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.10.8 ===");
+    Serial.println("Build: Weather Decimal in Quad - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
