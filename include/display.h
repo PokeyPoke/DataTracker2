@@ -25,6 +25,8 @@ class DisplayManager {
 private:
     U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2;
     DisplayState currentState;
+    uint8_t currentBrightness;
+    bool brightnessIncreasing;
 
     // Helper drawing functions
     void drawCenteredText(const char* text, int y, const uint8_t* font);
@@ -67,6 +69,11 @@ public:
 
     // Loading state with progress bar
     void showModuleLoading(const char* moduleName, int progress);
+
+    // Brightness control
+    void setBrightness(uint8_t level);  // 0-255
+    void cycleBrightness();             // Ping-pong cycle
+    uint8_t getBrightness();
 };
 
 #endif // DISPLAY_H

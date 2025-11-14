@@ -97,6 +97,9 @@ ButtonEvent ButtonHandler::check() {
             } else if (pressDuration >= LONG_PRESS_MIN) {
                 Serial.println("Long press triggered (config mode)");
                 return LONG_PRESS;
+            } else if (pressDuration >= BRIGHTNESS_PRESS_MIN && pressDuration < BRIGHTNESS_PRESS_MAX) {
+                Serial.println("Brightness cycle triggered");
+                return BRIGHTNESS_CYCLE;
             } else if (pressDuration >= DEBOUNCE_DELAY && pressDuration < SHORT_PRESS_MAX) {
                 Serial.println("Short press triggered (cycle module)");
                 return SHORT_PRESS;

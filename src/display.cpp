@@ -3,7 +3,8 @@
 #include <WiFi.h>
 
 DisplayManager::DisplayManager()
-    : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE), currentState(SPLASH) {
+    : u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE), currentState(SPLASH),
+      currentBrightness(255), brightnessIncreasing(false) {
 }
 
 void DisplayManager::init() {
@@ -511,4 +512,81 @@ void DisplayManager::showModuleLoading(const char* moduleName, int progress) {
     u8g2.drawStr((128 - percentWidth) / 2, 60, percentStr);
 
     u8g2.sendBuffer();
+}
+
+void DisplayManager::setBrightness(uint8_t level) {
+    currentBrightness = level;
+    u8g2.setContrast(level);
+    Serial.print("Display brightness set to: ");
+    Serial.println(level);
+}
+
+void DisplayManager::cycleBrightness() {
+    // Define brightness levels (5 steps: 51, 102, 153, 204, 255)
+    const uint8_t levels[] = {51, 102, 153, 204, 255};
+    const int levelCount = 5;
+
+    // Find current level index
+    int currentIndex = -1;
+    for (int i = 0; i < levelCount; i++) {
+        if (currentBrightness == levels[i]) {
+            currentIndex = i;
+            break;
+        }
+    }
+
+    // If not at a predefined level, start at max
+    if (currentIndex == -1) {
+        currentIndex = levelCount - 1;
+        brightnessIncreasing = false;
+    }
+
+    // Ping-pong logic
+    if (brightnessIncreasing) {
+        if (currentIndex >= levelCount - 1) {
+            // At max, reverse direction
+            brightnessIncreasing = false;
+            currentIndex--;
+        } else {
+            currentIndex++;
+        }
+    } else {
+        if (currentIndex <= 0) {
+            // At min, reverse direction
+            brightnessIncreasing = true;
+            currentIndex++;
+        } else {
+            currentIndex--;
+        }
+    }
+
+    setBrightness(levels[currentIndex]);
+
+    // Show brightness level on screen briefly
+    u8g2.clearBuffer();
+    u8g2.setFont(u8g2_font_helvB08_tr);
+    u8g2.drawStr(30, 20, "BRIGHTNESS");
+
+    // Draw brightness bar
+    int barWidth = 100;
+    int barHeight = 20;
+    int barX = 14;
+    int barY = 30;
+
+    u8g2.drawFrame(barX, barY, barWidth, barHeight);
+    int fillWidth = (barWidth - 4) * currentBrightness / 255;
+    u8g2.drawBox(barX + 2, barY + 2, fillWidth, barHeight - 4);
+
+    // Show percentage
+    u8g2.setFont(u8g2_font_6x10_tr);
+    char percentStr[8];
+    snprintf(percentStr, sizeof(percentStr), "%d%%", (currentBrightness * 100) / 255);
+    int percentWidth = u8g2.getStrWidth(percentStr);
+    u8g2.drawStr((128 - percentWidth) / 2, 62, percentStr);
+
+    u8g2.sendBuffer();
+}
+
+uint8_t DisplayManager::getBrightness() {
+    return currentBrightness;
 }

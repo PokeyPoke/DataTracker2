@@ -50,8 +50,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.14-MODULE-ORDER ===");
-    Serial.println("Build: Settings Module to End - Nov 13 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.15-BRIGHTNESS ===");
+    Serial.println("Build: Brightness Control - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -68,6 +68,12 @@ void setup() {
     // Initialize display
     display.init();
     Serial.println("Display initialized");
+
+    // Load and apply saved brightness
+    uint8_t savedBrightness = config["device"]["brightness"] | 255;
+    display.setBrightness(savedBrightness);
+    Serial.print("Loaded brightness: ");
+    Serial.println(savedBrightness);
 
     // Initialize button (if enabled)
     #ifdef ENABLE_BUTTON
@@ -273,6 +279,15 @@ void handleButtonEvent(ButtonEvent event) {
     switch (event) {
         case SHORT_PRESS:
             cycleToNextModule();
+            break;
+
+        case BRIGHTNESS_CYCLE:
+            display.cycleBrightness();
+            // Save brightness to config
+            config["device"]["brightness"] = display.getBrightness();
+            saveConfiguration();
+            // Return to normal display after 2 seconds
+            delay(2000);
             break;
 
         case LONG_PRESS:
