@@ -20,23 +20,15 @@ public:
         // Get location from config - use separate latitude/longitude fields
         JsonObject weatherData = config["modules"]["weather"];
 
-        // Read latitude and longitude from config (set by settings page)
-        float lat = weatherData["latitude"] | 37.7749;   // Default: San Francisco
-        float lon = weatherData["longitude"] | -122.4194;
+        // Read location from config (set by settings page)
         String location = weatherData["location"] | "San Francisco";
-        String apiKey = weatherData["apiKey"] | "";  // OpenWeatherMap API key
 
         Serial.print("Weather: Fetching for location: ");
         Serial.println(location);
-        Serial.print("Weather: Coordinates: lat=");
-        Serial.print(lat, 4);
-        Serial.print(", lon=");
-        Serial.println(lon, 4);
 
-        // Use OpenWeatherMap API (requires free API key)
-        // Get key at: https://openweathermap.org/api
-        String url = "https://api.openweathermap.org/data/2.5/weather?lat=" + String(lat, 4) +
-                     "&lon=" + String(lon, 4) + "&units=metric&appid=" + apiKey;
+        // Use wttr.in API (free, no auth required, accurate data)
+        // Format: ?format=j1 returns JSON with current weather
+        String url = "https://wttr.in/" + location + "?format=j1";
 
         Serial.print("Weather: URL = ");
         Serial.println(url);
@@ -87,27 +79,32 @@ public:
 
         Serial.println("Weather: JSON parsed successfully");
 
-        // OpenWeatherMap API format
-        if (!doc.containsKey("main")) {
-            errorMsg = "Missing main data";
-            Serial.println("Weather: ERROR - Missing 'main' in response");
+        // wttr.in API format
+        if (!doc.containsKey("current_condition")) {
+            errorMsg = "Missing current_condition data";
+            Serial.println("Weather: ERROR - Missing 'current_condition' in response");
             return false;
         }
 
-        JsonObject main = doc["main"];
-        if (!main.containsKey("temp")) {
+        JsonArray currentCondition = doc["current_condition"];
+        if (currentCondition.size() == 0) {
+            errorMsg = "Empty current_condition array";
+            Serial.println("Weather: ERROR - Empty 'current_condition' array");
+            return false;
+        }
+
+        JsonObject current = currentCondition[0];
+        if (!current.containsKey("temp_C")) {
             errorMsg = "Missing temperature data";
-            Serial.println("Weather: ERROR - Missing 'temp' in main");
+            Serial.println("Weather: ERROR - Missing 'temp_C' in current_condition");
             return false;
         }
 
-        float temp = main["temp"] | 0.0;
+        // wttr.in returns temperature as string
+        float temp = atof(current["temp_C"] | "0");
 
         // Get weather condition
-        String condition = "Unknown";
-        if (doc.containsKey("weather") && doc["weather"].size() > 0) {
-            condition = doc["weather"][0]["main"].as<String>();
-        }
+        String condition = current["weatherDesc"][0]["value"] | "Unknown";
 
         Serial.print("Weather: Parsed - Temp: ");
         Serial.print(temp, 1);
