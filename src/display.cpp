@@ -288,10 +288,10 @@ void DisplayManager::showWeather(float temp, const char* condition, const char* 
     int tempWidth = u8g2.getStrWidth(tempStr);
     u8g2.drawStr((128 - tempWidth - 24) / 2, 35, tempStr);
 
-    // Degree symbol and C (add more spacing to prevent overlap)
-    u8g2.setFont(u8g2_font_helvB10_tr);
-    u8g2.drawStr((128 - tempWidth - 24) / 2 + tempWidth + 6, 35, "C");
-    u8g2.drawCircle((128 - tempWidth - 24) / 2 + tempWidth + 2, 18, 2);
+    // Degree symbol and C with larger font
+    u8g2.setFont(u8g2_font_helvB18_tr);
+    u8g2.drawStr((128 - tempWidth - 24) / 2 + tempWidth + 4, 35, "C");
+    u8g2.drawCircle((128 - tempWidth - 24) / 2 + tempWidth, 20, 3);
 
     // Condition
     u8g2.setFont(u8g2_font_helvB08_tr);

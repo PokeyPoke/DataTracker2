@@ -430,6 +430,11 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             } else if (type === 'weather') {
                 form.innerHTML = `
                     <div class="form-group">
+                        <label>OpenWeatherMap API Key:</label>
+                        <input type="text" id="apiKey" value="${data.apiKey || ''}" placeholder="Get free key at openweathermap.org/api">
+                        <small style="color: #888; font-size: 11px;">Free tier: 1000 calls/day (plenty for 15min updates)</small>
+                    </div>
+                    <div class="form-group">
                         <label>Search Location:</label>
                         <div class="search-container">
                             <input type="text" id="weather-search" placeholder="Search city..." oninput="searchWeather(this.value)">
@@ -608,9 +613,11 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 data.name = document.getElementById('stockName').value;
                 if (!data.ticker) { showMessage('Please enter a ticker symbol', 'error'); return; }
             } else if (type === 'weather') {
+                data.apiKey = document.getElementById('apiKey').value;
                 data.location = document.getElementById('location').value;
                 data.latitude = parseFloat(document.getElementById('latitude').value);
                 data.longitude = parseFloat(document.getElementById('longitude').value);
+                if (!data.apiKey) { showMessage('Please enter an OpenWeatherMap API key', 'error'); return; }
                 if (!data.location) { showMessage('Please enter a location', 'error'); return; }
             } else if (type === 'custom') {
                 data.label = document.getElementById('label').value;
@@ -1651,6 +1658,7 @@ void NetworkManager::setupSettingsServer() {
             newModule["value"] = 0.0;
             newModule["change"] = 0.0;
         } else if (moduleType == "weather") {
+            newModule["apiKey"] = sanitize(doc["apiKey"] | "");
             newModule["location"] = sanitize(doc["location"] | "San Francisco");
             newModule["latitude"] = doc["latitude"] | 37.7749;
             newModule["longitude"] = doc["longitude"] | -122.4194;
@@ -1854,6 +1862,7 @@ void NetworkManager::setupSettingsServer() {
             if (doc.containsKey("ticker")) module["ticker"] = sanitize(doc["ticker"]);
             if (doc.containsKey("name")) module["name"] = sanitize(doc["name"]);
         } else if (moduleType == "weather") {
+            if (doc.containsKey("apiKey")) module["apiKey"] = sanitize(doc["apiKey"]);
             if (doc.containsKey("location")) module["location"] = sanitize(doc["location"]);
             if (doc.containsKey("latitude")) module["latitude"] = doc["latitude"];
             if (doc.containsKey("longitude")) module["longitude"] = doc["longitude"];

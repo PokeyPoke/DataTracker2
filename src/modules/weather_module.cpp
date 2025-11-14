@@ -24,6 +24,7 @@ public:
         float lat = weatherData["latitude"] | 37.7749;   // Default: San Francisco
         float lon = weatherData["longitude"] | -122.4194;
         String location = weatherData["location"] | "San Francisco";
+        String apiKey = weatherData["apiKey"] | "";  // OpenWeatherMap API key
 
         Serial.print("Weather: Fetching for location: ");
         Serial.println(location);
@@ -32,9 +33,10 @@ public:
         Serial.print(", lon=");
         Serial.println(lon, 4);
 
-        // Use Open-Meteo API (free, no auth required)
-        String url = "https://api.open-meteo.com/v1/forecast?latitude=" + String(lat, 4) +
-                     "&longitude=" + String(lon, 4) + "&current_weather=true";
+        // Use OpenWeatherMap API (requires free API key)
+        // Get key at: https://openweathermap.org/api
+        String url = "https://api.openweathermap.org/data/2.5/weather?lat=" + String(lat, 4) +
+                     "&lon=" + String(lon, 4) + "&units=metric&appid=" + apiKey;
 
         Serial.print("Weather: URL = ");
         Serial.println(url);
@@ -85,52 +87,46 @@ public:
 
         Serial.println("Weather: JSON parsed successfully");
 
-        if (!doc.containsKey("current_weather")) {
-            errorMsg = "Missing current_weather data";
-            Serial.println("Weather: ERROR - Missing 'current_weather' in response");
+        // OpenWeatherMap API format
+        if (!doc.containsKey("main")) {
+            errorMsg = "Missing main data";
+            Serial.println("Weather: ERROR - Missing 'main' in response");
             return false;
         }
 
-        JsonObject currentWeather = doc["current_weather"];
-        if (!currentWeather.containsKey("temperature")) {
+        JsonObject main = doc["main"];
+        if (!main.containsKey("temp")) {
             errorMsg = "Missing temperature data";
-            Serial.println("Weather: ERROR - Missing 'temperature' in current_weather");
+            Serial.println("Weather: ERROR - Missing 'temp' in main");
             return false;
         }
 
-        float temp = currentWeather["temperature"] | 0.0;
-        int weatherCode = currentWeather["weathercode"] | 0;
+        float temp = main["temp"] | 0.0;
+
+        // Get weather condition
+        String condition = "Unknown";
+        if (doc.containsKey("weather") && doc["weather"].size() > 0) {
+            condition = doc["weather"][0]["main"].as<String>();
+        }
 
         Serial.print("Weather: Parsed - Temp: ");
         Serial.print(temp, 1);
-        Serial.print("°C, Code: ");
-        Serial.print(weatherCode);
-        Serial.print(" (");
-        Serial.print(getWeatherCondition(weatherCode));
-        Serial.println(")");
+        Serial.print("°C, Condition: ");
+        Serial.println(condition);
 
         // Update cache (use reference, NOT .to<JsonObject>() which clears everything!)
         JsonObject data = config["modules"]["weather"];
         data["temperature"] = temp;
-        data["condition"] = getWeatherCondition(weatherCode);
+        data["condition"] = condition;
         data["lastUpdate"] = millis() / 1000;
         data["lastSuccess"] = true;
 
         Serial.print("Weather: ");
         Serial.print(temp, 1);
         Serial.print("°C, ");
-        Serial.println(getWeatherCondition(weatherCode));
+        Serial.println(condition);
 
         return true;
-    }
-
-    const char* getWeatherCondition(int code) {
-        if (code == 0) return "Clear";
-        if (code <= 3) return "Cloudy";
-        if (code <= 67) return "Rain";
-        if (code <= 77) return "Snow";
-        if (code <= 99) return "Storm";
-        return "Unknown";
     }
 
     String formatDisplay() override {
