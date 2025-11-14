@@ -51,8 +51,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.19-BRIGHTNESS-TIMEOUT ===");
-    Serial.println("Build: Brightness Auto-Exit Timeout - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.20-TIMEOUT-FIX ===");
+    Serial.println("Build: Fix Brightness Timeout Bug - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -230,10 +230,11 @@ void loop() {
     }
     #endif
 
-    // Check brightness mode timeout
-    if (brightnessMode && (now - lastBrightnessActivity > BRIGHTNESS_TIMEOUT)) {
+    // Check brightness mode timeout (only if we're in the mode and timer has been set)
+    if (brightnessMode && lastBrightnessActivity > 0 && (now - lastBrightnessActivity > BRIGHTNESS_TIMEOUT)) {
         Serial.println("Brightness mode timeout - returning to modules");
         brightnessMode = false;
+        lastBrightnessActivity = 0;  // Reset timer
         // Save brightness setting
         config["device"]["brightness"] = display.getBrightness();
         saveConfiguration();
@@ -314,6 +315,7 @@ void handleButtonEvent(ButtonEvent event) {
             } else {
                 // Exiting brightness mode
                 Serial.println("Exited brightness mode");
+                lastBrightnessActivity = 0;  // Reset timer
                 // Save brightness setting
                 config["device"]["brightness"] = display.getBrightness();
                 saveConfiguration();
