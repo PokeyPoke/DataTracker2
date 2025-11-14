@@ -342,6 +342,24 @@ void DisplayManager::showModule(const char* moduleId) {
 
         showSettings(code, ip.c_str(), timeRemaining);
     }
+    else if (moduleType == "quad") {
+        // Quad screen - show 4 modules in 2x2 grid
+        String slot1 = module["slot1"] | "";
+        String slot2 = module["slot2"] | "";
+        String slot3 = module["slot3"] | "";
+        String slot4 = module["slot4"] | "";
+
+        Serial.print("Showing quad module - Slots: ");
+        Serial.print(slot1);
+        Serial.print(", ");
+        Serial.print(slot2);
+        Serial.print(", ");
+        Serial.print(slot3);
+        Serial.print(", ");
+        Serial.println(slot4);
+
+        showQuadScreen(slot1.c_str(), slot2.c_str(), slot3.c_str(), slot4.c_str(), lastUpdate, stale);
+    }
     else {
         Serial.print("ERROR: Unknown module type '");
         Serial.print(moduleType);
@@ -491,6 +509,70 @@ void DisplayManager::showSettings(uint32_t securityCode, const char* deviceIP, u
 
     // Note: Removed time countdown to prevent display flickering
     // QR codes need to be completely static for scanning
+
+    u8g2.sendBuffer();
+}
+
+void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const char* slot3, const char* slot4, unsigned long lastUpdate, bool stale) {
+    u8g2.clearBuffer();
+
+    // Helper to get module value display string
+    auto getModuleValue = [](const char* moduleId) -> String {
+        if (strlen(moduleId) == 0) return "---";
+
+        JsonObject module = config["modules"][moduleId];
+        if (module.isNull()) return "N/A";
+
+        String type = module["type"] | "";
+
+        if (type == "crypto") {
+            String symbol = module["cryptoSymbol"] | "?";
+            float value = module["value"] | 0.0;
+            return symbol + ":" + String((int)value);
+        } else if (type == "stock") {
+            String ticker = module["ticker"] | "?";
+            float value = module["value"] | 0.0;
+            return ticker + ":" + String((int)value);
+        } else if (type == "weather") {
+            float temp = module["temperature"] | 0.0;
+            return String((int)temp) + "C";
+        } else if (type == "custom") {
+            float value = module["value"] | 0.0;
+            String unit = module["unit"] | "";
+            return String(value, 1) + unit;
+        }
+
+        return "---";
+    };
+
+    // Get values for all 4 slots
+    String val1 = getModuleValue(slot1);
+    String val2 = getModuleValue(slot2);
+    String val3 = getModuleValue(slot3);
+    String val4 = getModuleValue(slot4);
+
+    // Draw 2x2 grid
+    u8g2.setFont(u8g2_font_helvB08_tr);
+
+    // Dividing lines
+    u8g2.drawHLine(0, 32, 128);  // Horizontal middle
+    u8g2.drawVLine(64, 0, 64);    // Vertical middle
+
+    // Top-left (slot1)
+    int w1 = u8g2.getStrWidth(val1.c_str());
+    u8g2.drawStr((64 - w1) / 2, 20, val1.c_str());
+
+    // Top-right (slot2)
+    int w2 = u8g2.getStrWidth(val2.c_str());
+    u8g2.drawStr(64 + (64 - w2) / 2, 20, val2.c_str());
+
+    // Bottom-left (slot3)
+    int w3 = u8g2.getStrWidth(val3.c_str());
+    u8g2.drawStr((64 - w3) / 2, 52, val3.c_str());
+
+    // Bottom-right (slot4)
+    int w4 = u8g2.getStrWidth(val4.c_str());
+    u8g2.drawStr(64 + (64 - w4) / 2, 52, val4.c_str());
 
     u8g2.sendBuffer();
 }

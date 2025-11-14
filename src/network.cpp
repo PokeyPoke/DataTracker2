@@ -464,6 +464,40 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                         <input type="text" id="unit" value="${data.unit || ''}" placeholder="units" maxlength="10">
                     </div>
                 `;
+            } else if (type === 'quad') {
+                // Build module selector options from current modules
+                let moduleOptions = '<option value="">-- None --</option>';
+                modules.forEach(m => {
+                    if (m.type !== 'quad' && m.type !== 'settings') {
+                        const name = getModuleName(m);
+                        moduleOptions += `<option value="${m.id}">${name}</option>`;
+                    }
+                });
+
+                form.innerHTML = `
+                    <div class="form-group">
+                        <label>Top Left Module:</label>
+                        <select id="slot1">${moduleOptions}</select>
+                    </div>
+                    <div class="form-group">
+                        <label>Top Right Module:</label>
+                        <select id="slot2">${moduleOptions}</select>
+                    </div>
+                    <div class="form-group">
+                        <label>Bottom Left Module:</label>
+                        <select id="slot3">${moduleOptions}</select>
+                    </div>
+                    <div class="form-group">
+                        <label>Bottom Right Module:</label>
+                        <select id="slot4">${moduleOptions}</select>
+                    </div>
+                `;
+
+                // Set current values if editing
+                if (data.slot1) document.getElementById('slot1').value = data.slot1;
+                if (data.slot2) document.getElementById('slot2').value = data.slot2;
+                if (data.slot3) document.getElementById('slot3').value = data.slot3;
+                if (data.slot4) document.getElementById('slot4').value = data.slot4;
             }
         }
         function searchCrypto(query) {
@@ -583,6 +617,11 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 data.value = parseFloat(document.getElementById('value').value) || 0;
                 data.unit = document.getElementById('unit').value;
                 if (!data.label) { showMessage('Please enter a label', 'error'); return; }
+            } else if (type === 'quad') {
+                data.slot1 = document.getElementById('slot1').value;
+                data.slot2 = document.getElementById('slot2').value;
+                data.slot3 = document.getElementById('slot3').value;
+                data.slot4 = document.getElementById('slot4').value;
             }
             const url = isNew ? '/api/modules' : '/api/modules/update';
             fetch(url, {

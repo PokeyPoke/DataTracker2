@@ -67,6 +67,9 @@ public:
     // Settings module
     void showSettings(uint32_t securityCode, const char* deviceIP, unsigned long timeRemaining);
 
+    // Quad screen module (2x2 grid)
+    void showQuadScreen(const char* slot1, const char* slot2, const char* slot3, const char* slot4, unsigned long lastUpdate, bool stale);
+
     // Loading state with progress bar
     void showModuleLoading(const char* moduleName, int progress);
 
