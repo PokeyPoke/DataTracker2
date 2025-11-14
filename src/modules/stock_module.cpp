@@ -72,7 +72,7 @@ public:
         Serial.print("Stock: Response preview: ");
         Serial.println(payload.substring(0, min(100, (int)payload.length())));
 
-        DynamicJsonDocument doc(2048);
+        StaticJsonDocument<2048> doc;
         DeserializationError error = deserializeJson(doc, payload);
 
         if (error) {

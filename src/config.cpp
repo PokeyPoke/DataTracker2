@@ -1,8 +1,8 @@
 #include "config.h"
 
 // Global configuration document (StaticJsonDocument allocated in .bss, not heap)
-// Increased to 2KB to accommodate all crypto fields
-StaticJsonDocument<2048> config;
+// Increased to 8KB to support 15-20 dynamic module instances
+StaticJsonDocument<8192> config;
 
 // Track last save time to reduce flash wear
 static unsigned long lastSaveTime = 0;
@@ -204,9 +204,20 @@ void setDefaultConfig() {
     config["device"]["activeModule"] = "bitcoin";
     config["device"]["enableButton"] = true;
     config["device"]["refreshInterval"] = 300;  // 5 minutes default
+    config["device"]["currency"] = "USD";        // Default currency for all modules
+
+    // Module display order (array of module IDs in display order)
+    JsonArray moduleOrder = config["device"]["moduleOrder"].to<JsonArray>();
+    moduleOrder.add("bitcoin");
+    moduleOrder.add("ethereum");
+    moduleOrder.add("stock");
+    moduleOrder.add("weather");
+    moduleOrder.add("custom");
+    moduleOrder.add("settings");
 
     // Initialize empty module data
     JsonObject bitcoin = config["modules"]["bitcoin"].to<JsonObject>();
+    bitcoin["type"] = "crypto";              // Module type for future dynamic creation
     bitcoin["cryptoId"] = "bitcoin";
     bitcoin["cryptoSymbol"] = "BTC";
     bitcoin["cryptoName"] = "Bitcoin";
@@ -216,6 +227,7 @@ void setDefaultConfig() {
     bitcoin["lastSuccess"] = false;
 
     JsonObject ethereum = config["modules"]["ethereum"].to<JsonObject>();
+    ethereum["type"] = "crypto";             // Module type for future dynamic creation
     ethereum["cryptoId"] = "ethereum";
     ethereum["cryptoSymbol"] = "ETH";
     ethereum["cryptoName"] = "Ethereum";
@@ -225,6 +237,7 @@ void setDefaultConfig() {
     ethereum["lastSuccess"] = false;
 
     JsonObject stock = config["modules"]["stock"].to<JsonObject>();
+    stock["type"] = "stock";                 // Module type for future dynamic creation
     stock["ticker"] = "AAPL";
     stock["name"] = "Apple Inc.";
     stock["value"] = 0.0;
@@ -233,6 +246,7 @@ void setDefaultConfig() {
     stock["lastSuccess"] = false;
 
     JsonObject weather = config["modules"]["weather"].to<JsonObject>();
+    weather["type"] = "weather";             // Module type for future dynamic creation
     weather["latitude"] = 37.7749;
     weather["longitude"] = -122.4194;
     weather["location"] = "San Francisco";
@@ -242,11 +256,18 @@ void setDefaultConfig() {
     weather["lastSuccess"] = false;
 
     JsonObject custom = config["modules"]["custom"].to<JsonObject>();
+    custom["type"] = "custom";               // Module type for future dynamic creation
     custom["value"] = 0.0;
     custom["label"] = "My Metric";
     custom["unit"] = "units";
     custom["lastUpdate"] = 0;
     custom["lastSuccess"] = true;
+
+    JsonObject settings = config["modules"]["settings"].to<JsonObject>();
+    settings["type"] = "settings";           // Module type for future dynamic creation
+    settings["code"] = "";                   // Security code (generated dynamically)
+    settings["lastUpdate"] = 0;
+    settings["lastSuccess"] = true;
 
     Serial.println("Default configuration created");
 }

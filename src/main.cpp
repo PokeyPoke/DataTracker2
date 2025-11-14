@@ -6,14 +6,7 @@
 #include "button.h"
 #include "security.h"
 #include "modules/module_interface.h"
-
-// Include all module implementations
-#include "modules/bitcoin_module.cpp"
-#include "modules/ethereum_module.cpp"
-#include "modules/stock_module.cpp"
-#include "modules/weather_module.cpp"
-#include "modules/custom_module.cpp"
-#include "modules/settings_module.cpp"
+#include "module_factory.h"
 
 // Global objects
 DisplayManager display;
@@ -49,8 +42,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.7.0 ===");
-    Serial.println("Build: Brightness Manual Exit Only - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.8.0 ===");
+    Serial.println("Build: Dynamic Module Factory - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -106,32 +99,10 @@ void setup() {
             // Start settings web server (always available on local network)
             network.startSettingsServer();
 
-            // Initialize scheduler and register modules
+            // Initialize scheduler and load modules dynamically from config
             Serial.println("\n=== Initializing Scheduler ===");
             scheduler.init();
-
-            Serial.println("Registering modules...");
-            scheduler.registerModule(new BitcoinModule());
-            Serial.println("  ✓ BitcoinModule registered");
-            scheduler.registerModule(new EthereumModule());
-            Serial.println("  ✓ EthereumModule registered");
-
-            Serial.println("  Creating StockModule...");
-            StockModule* stockMod = new StockModule();
-            Serial.print("    StockModule created, id='");
-            Serial.print(stockMod->id);
-            Serial.println("'");
-            scheduler.registerModule(stockMod);
-            Serial.println("  ✓ StockModule registered");
-
-            scheduler.registerModule(new WeatherModule());
-            Serial.println("  ✓ WeatherModule registered");
-            scheduler.registerModule(new CustomModule());
-            Serial.println("  ✓ CustomModule registered");
-            scheduler.registerModule(new SettingsModule());
-            Serial.println("  ✓ SettingsModule registered");
-
-            Serial.println("All modules registered");
+            scheduler.loadModulesFromConfig();
 
             // TEMPORARY DEBUG: Always fetch stock at startup to verify it works
             Serial.println("\n*** TEMPORARY DEBUG: Force-fetching STOCK module at startup ***");
@@ -316,15 +287,21 @@ void handleButtonEvent(ButtonEvent event) {
 }
 
 void cycleToNextModule() {
-    // Available modules (settings at the end)
-    const char* modules[] = {"bitcoin", "ethereum", "stock", "weather", "custom", "settings"};
-    const int moduleCount = 6;
+    // Get module order from config (supports dynamic module management)
+    JsonArray moduleOrder = config["device"]["moduleOrder"];
+    int moduleCount = moduleOrder.size();
+
+    // Fallback if moduleOrder is empty (shouldn't happen with default config)
+    if (moduleCount == 0) {
+        Serial.println("ERROR: moduleOrder is empty, cannot cycle");
+        return;
+    }
 
     Serial.print("DEBUG: Total modules available: ");
     Serial.println(moduleCount);
-    Serial.print("DEBUG: Module array: ");
+    Serial.print("DEBUG: Module order: ");
     for (int i = 0; i < moduleCount; i++) {
-        Serial.print(modules[i]);
+        Serial.print(moduleOrder[i].as<const char*>());
         if (i < moduleCount - 1) Serial.print(", ");
     }
     Serial.println();
@@ -333,10 +310,16 @@ void cycleToNextModule() {
     String currentModule = config["device"]["activeModule"] | "bitcoin";
     int currentIndex = -1;
     for (int i = 0; i < moduleCount; i++) {
-        if (currentModule == modules[i]) {
+        if (currentModule == moduleOrder[i].as<String>()) {
             currentIndex = i;
             break;
         }
+    }
+
+    // If current module not in order, start from beginning
+    if (currentIndex == -1) {
+        currentIndex = 0;
+        Serial.println("DEBUG: Current module not in order, starting from beginning");
     }
 
     Serial.print("DEBUG: Current index: ");
@@ -344,7 +327,7 @@ void cycleToNextModule() {
 
     // Cycle to next (with wraparound)
     int nextIndex = (currentIndex + 1) % moduleCount;
-    String nextModule = modules[nextIndex];
+    String nextModule = moduleOrder[nextIndex].as<String>();
 
     Serial.print("DEBUG: Next index: ");
     Serial.println(nextIndex);

@@ -1,5 +1,6 @@
 #include "scheduler.h"
 #include "modules/module_interface.h"
+#include "module_factory.h"
 #include "config.h"
 
 Scheduler::Scheduler() {
@@ -29,6 +30,85 @@ void Scheduler::registerModule(ModuleInterface* module) {
         Serial.print("Registered module: ");
         Serial.println(module->id);
     }
+}
+
+void Scheduler::unregisterModule(const char* moduleId) {
+    String id = String(moduleId);
+    auto it = modules.find(id);
+    if (it != modules.end()) {
+        delete it->second;  // Free module memory
+        modules.erase(it);
+        Serial.print("Unregistered module: ");
+        Serial.println(moduleId);
+    }
+}
+
+void Scheduler::loadModulesFromConfig() {
+    Serial.println("\n=== Loading Modules from Config ===");
+
+    // Get module order array
+    JsonArray moduleOrder = config["device"]["moduleOrder"];
+    if (moduleOrder.size() == 0) {
+        Serial.println("ERROR: moduleOrder is empty!");
+        return;
+    }
+
+    Serial.print("Found ");
+    Serial.print(moduleOrder.size());
+    Serial.println(" modules in config");
+
+    // Iterate through module order and create instances
+    for (JsonVariant v : moduleOrder) {
+        String moduleId = v.as<String>();
+
+        // Get module config
+        JsonObject moduleConfig = config["modules"][moduleId];
+        if (moduleConfig.isNull()) {
+            Serial.print("WARNING: Module '");
+            Serial.print(moduleId);
+            Serial.println("' not found in config, skipping");
+            continue;
+        }
+
+        // Get module type
+        String moduleType = moduleConfig["type"] | "unknown";
+        if (moduleType == "unknown") {
+            Serial.print("WARNING: Module '");
+            Serial.print(moduleId);
+            Serial.println("' has no type, skipping");
+            continue;
+        }
+
+        // Check if module already registered (avoid duplicates)
+        if (hasModule(moduleId.c_str())) {
+            Serial.print("Module '");
+            Serial.print(moduleId);
+            Serial.println("' already registered, skipping");
+            continue;
+        }
+
+        // Create module using factory
+        ModuleInterface* module = ModuleFactory::createModule(
+            moduleType.c_str(),
+            moduleId.c_str(),
+            moduleConfig
+        );
+
+        if (module) {
+            registerModule(module);
+            Serial.print("  ✓ Created ");
+            Serial.print(moduleType);
+            Serial.print(" module: ");
+            Serial.println(moduleId);
+        } else {
+            Serial.print("  ✗ Failed to create module: ");
+            Serial.println(moduleId);
+        }
+    }
+
+    Serial.print("\nTotal modules registered: ");
+    Serial.println(modules.size());
+    Serial.println("===================================\n");
 }
 
 void Scheduler::tick() {

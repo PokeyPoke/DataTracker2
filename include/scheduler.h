@@ -42,6 +42,8 @@ public:
 
     void init();
     void registerModule(ModuleInterface* module);
+    void unregisterModule(const char* moduleId);
+    void loadModulesFromConfig();  // Load all modules from config using factory
     void tick();
     void requestFetch(const char* moduleId, bool forced = false);
 

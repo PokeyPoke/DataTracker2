@@ -9,8 +9,8 @@
 #define CONFIG_FILE "/config.json"
 
 // Global configuration document (StaticJsonDocument allocated in .bss, not heap)
-// Increased to 2KB to accommodate all crypto fields
-extern StaticJsonDocument<2048> config;
+// Increased to 8KB to support 15-20 dynamic module instances
+extern StaticJsonDocument<8192> config;
 
 // Configuration management functions
 bool initStorage();
