@@ -275,40 +275,52 @@ void DisplayManager::showModule(const char* moduleId) {
     unsigned long lastUpdate = module["lastUpdate"] | 0;
     bool stale = isCacheStale(moduleId);
 
-    if (strcmp(moduleId, "bitcoin") == 0) {
+    // Get module type to support dynamic module IDs
+    String moduleType = module["type"] | "unknown";
+
+    if (moduleType == "crypto") {
+        // Support both old hardcoded IDs and new dynamic IDs
         float price = module["value"] | 0.0;
         float change = module["change24h"] | 0.0;
-        const char* cryptoName = module["cryptoName"] | "Bitcoin";
-        Serial.print("Bitcoin module - Name: ");
+        const char* cryptoName = module["cryptoName"] | "Crypto";
+        const char* cryptoSymbol = module["cryptoSymbol"] | "???";
+
+        Serial.print("Crypto module (");
+        Serial.print(moduleId);
+        Serial.print(") - Name: ");
         Serial.print(cryptoName);
         Serial.print(", Price: $");
         Serial.println(price);
-        showBitcoin(price, change, lastUpdate, stale);
+
+        // Use appropriate display based on symbol
+        if (strcmp(cryptoSymbol, "BTC") == 0) {
+            showBitcoin(price, change, lastUpdate, stale);
+        } else if (strcmp(cryptoSymbol, "ETH") == 0) {
+            showEthereum(price, change, lastUpdate, stale);
+        } else {
+            // Generic crypto display using custom layout
+            showCustom(price, cryptoName, cryptoSymbol, lastUpdate);
+        }
     }
-    else if (strcmp(moduleId, "ethereum") == 0) {
-        float price = module["value"] | 0.0;
-        float change = module["change24h"] | 0.0;
-        showEthereum(price, change, lastUpdate, stale);
-    }
-    else if (strcmp(moduleId, "stock") == 0) {
+    else if (moduleType == "stock") {
         const char* ticker = module["ticker"] | "STOCK";
         float price = module["value"] | 0.0;
         float change = module["change"] | 0.0;
         showStock(ticker, price, change, lastUpdate, stale);
     }
-    else if (strcmp(moduleId, "weather") == 0) {
+    else if (moduleType == "weather") {
         float temp = module["temperature"] | 0.0;
         const char* condition = module["condition"] | "Unknown";
         const char* location = module["location"] | "Unknown";
         showWeather(temp, condition, location, lastUpdate, stale);
     }
-    else if (strcmp(moduleId, "custom") == 0) {
+    else if (moduleType == "custom") {
         float value = module["value"] | 0.0;
         const char* label = module["label"] | "CUSTOM";
         const char* unit = module["unit"] | "";
         showCustom(value, label, unit, lastUpdate);
     }
-    else if (strcmp(moduleId, "settings") == 0) {
+    else if (moduleType == "settings") {
         uint32_t code = module["securityCode"] | 0;
         unsigned long timeRemaining = module["codeTimeRemaining"] | 0;
         unsigned long lastUpdate = module["lastUpdate"] | 0;
@@ -331,6 +343,11 @@ void DisplayManager::showModule(const char* moduleId) {
         showSettings(code, ip.c_str(), timeRemaining);
     }
     else {
+        Serial.print("ERROR: Unknown module type '");
+        Serial.print(moduleType);
+        Serial.print("' for module ID '");
+        Serial.print(moduleId);
+        Serial.println("'");
         showError("Unknown module");
     }
 }
