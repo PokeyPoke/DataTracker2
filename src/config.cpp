@@ -265,7 +265,14 @@ void setDefaultConfig() {
 
     JsonObject settings = config["modules"]["settings"].to<JsonObject>();
     settings["type"] = "settings";           // Module type for future dynamic creation
-    settings["code"] = "";                   // Security code (generated dynamically)
+
+    // Generate initial random 6-digit code
+    uint32_t initialCode = 0;
+    for (int i = 0; i < 6; i++) {
+        initialCode = initialCode * 10 + random(0, 10);
+    }
+    settings["securityCode"] = initialCode;  // Security code (refreshed every 30s)
+    settings["codeTimeRemaining"] = 300000;  // 5 minutes in milliseconds
     settings["lastUpdate"] = 0;
     settings["lastSuccess"] = true;
 

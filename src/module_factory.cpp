@@ -400,13 +400,14 @@ public:
 
     bool fetch(String& errorMsg) override {
         // Generate random 6-digit security code
-        String code = "";
+        uint32_t code = 0;
         for (int i = 0; i < 6; i++) {
-            code += String(random(0, 10));
+            code = code * 10 + random(0, 10);
         }
 
         JsonObject data = config["modules"]["settings"];
-        data["code"] = code;
+        data["securityCode"] = code;
+        data["codeTimeRemaining"] = 300000;  // 5 minutes in milliseconds
         data["lastUpdate"] = millis() / 1000;
         data["lastSuccess"] = true;
 
@@ -418,9 +419,11 @@ public:
 
     String formatDisplay() override {
         JsonObject data = config["modules"]["settings"];
-        String code = data["code"] | "------";
+        uint32_t code = data["securityCode"] | 0;
 
-        return "Code: " + code;
+        char buffer[16];
+        snprintf(buffer, sizeof(buffer), "Code: %06u", code);
+        return String(buffer);
     }
 };
 
