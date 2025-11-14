@@ -556,9 +556,10 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
         } else if (type == "weather") {
             float temp = module["temperature"] | 0.0;
             String location = module["location"] | "";
+            String unit = module["unit"] | "C";
             // Abbreviate location to first 4 chars
             if (location.length() > 4) location = location.substring(0, 4);
-            return {location, String((int)temp) + "\xB0"};
+            return {location, String((int)temp) + "°" + unit};
         } else if (type == "custom") {
             float value = module["value"] | 0.0;
             String label = module["label"] | "";
