@@ -41,12 +41,16 @@ String removeAccents(const char* input) {
             unsigned char c2 = *p++;
 
             // Czech Ř (U+0158) = C5 98, ř (U+0159) = C5 99
-            if (c1 == 0xC5 && (c2 == 0x98 || c2 == 0x99)) {
-                result += 'R';  // Convert Ř/ř to R
+            if (c1 == 0xC5 && c2 == 0x98) {
+                result += 'R';  // Convert Ř to R
+            } else if (c1 == 0xC5 && c2 == 0x99) {
+                result += 'r';  // Convert ř to r
             }
             // Czech Č (U+010C) = C4 8C, č (U+010D) = C4 8D
-            else if (c1 == 0xC4 && (c2 == 0x8C || c2 == 0x8D)) {
-                result += 'C';  // Convert Č/č to C
+            else if (c1 == 0xC4 && c2 == 0x8C) {
+                result += 'C';  // Convert Č to C
+            } else if (c1 == 0xC4 && c2 == 0x8D) {
+                result += 'c';  // Convert č to c
             }
             // Add more mappings as needed
             else {

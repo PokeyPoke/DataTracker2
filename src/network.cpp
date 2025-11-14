@@ -1617,8 +1617,10 @@ void NetworkManager::setupSettingsServer() {
                     unsigned char c2 = *p++;
 
                     // Czech characters: Ř/ř, Č/č, etc.
-                    if (c1 == 0xC5 && (c2 == 0x98 || c2 == 0x99)) result += 'R';  // Ř/ř
-                    else if (c1 == 0xC4 && (c2 == 0x8C || c2 == 0x8D)) result += 'C';  // Č/č
+                    if (c1 == 0xC5 && c2 == 0x98) result += 'R';  // Ř (uppercase)
+                    else if (c1 == 0xC5 && c2 == 0x99) result += 'r';  // ř (lowercase)
+                    else if (c1 == 0xC4 && c2 == 0x8C) result += 'C';  // Č (uppercase)
+                    else if (c1 == 0xC4 && c2 == 0x8D) result += 'c';  // č (lowercase)
                     else if (c1 == 0xC3 && c2 == 0xA1) result += 'a';  // á
                     else if (c1 == 0xC3 && c2 == 0xA9) result += 'e';  // é
                     else if (c1 == 0xC3 && c2 == 0xAD) result += 'i';  // í
@@ -1822,8 +1824,10 @@ void NetworkManager::setupSettingsServer() {
                     unsigned char c2 = *p++;
 
                     // Czech characters: Ř/ř, Č/č, etc.
-                    if (c1 == 0xC5 && (c2 == 0x98 || c2 == 0x99)) result += 'R';  // Ř/ř
-                    else if (c1 == 0xC4 && (c2 == 0x8C || c2 == 0x8D)) result += 'C';  // Č/č
+                    if (c1 == 0xC5 && c2 == 0x98) result += 'R';  // Ř (uppercase)
+                    else if (c1 == 0xC5 && c2 == 0x99) result += 'r';  // ř (lowercase)
+                    else if (c1 == 0xC4 && c2 == 0x8C) result += 'C';  // Č (uppercase)
+                    else if (c1 == 0xC4 && c2 == 0x8D) result += 'c';  // č (lowercase)
                     else if (c1 == 0xC3 && c2 == 0xA1) result += 'a';  // á
                     else if (c1 == 0xC3 && c2 == 0xA9) result += 'e';  // é
                     else if (c1 == 0xC3 && c2 == 0xAD) result += 'i';  // í
