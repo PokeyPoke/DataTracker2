@@ -522,45 +522,43 @@ void DisplayManager::setBrightness(uint8_t level) {
 }
 
 void DisplayManager::cycleBrightness() {
-    // Define brightness levels (5 steps: 51, 102, 153, 204, 255)
-    const uint8_t levels[] = {51, 102, 153, 204, 255};
-    const int levelCount = 5;
+    // Brightness range: 5% to 100% (13 to 255)
+    const uint8_t MIN_BRIGHTNESS = 13;   // ~5%
+    const uint8_t MAX_BRIGHTNESS = 255;  // 100%
 
-    // Find current level index
-    int currentIndex = -1;
-    for (int i = 0; i < levelCount; i++) {
-        if (currentBrightness == levels[i]) {
-            currentIndex = i;
-            break;
-        }
-    }
-
-    // If not at a predefined level, start at max
-    if (currentIndex == -1) {
-        currentIndex = levelCount - 1;
-        brightnessIncreasing = false;
+    // Variable step size based on current brightness
+    uint8_t stepSize;
+    if (currentBrightness <= 26) {
+        // At lowest end (5-10%): step by 1% (~2.55 per step)
+        stepSize = 3;
+    } else if (currentBrightness <= 51) {
+        // Low range (10-20%): step by 5% (~12.75 per step)
+        stepSize = 13;
+    } else {
+        // Normal range (20-100%): step by 10% (25.5 per step)
+        stepSize = 26;
     }
 
     // Ping-pong logic
     if (brightnessIncreasing) {
-        if (currentIndex >= levelCount - 1) {
+        if (currentBrightness + stepSize >= MAX_BRIGHTNESS) {
             // At max, reverse direction
+            currentBrightness = MAX_BRIGHTNESS;
             brightnessIncreasing = false;
-            currentIndex--;
         } else {
-            currentIndex++;
+            currentBrightness += stepSize;
         }
     } else {
-        if (currentIndex <= 0) {
+        if (currentBrightness <= MIN_BRIGHTNESS + stepSize) {
             // At min, reverse direction
+            currentBrightness = MIN_BRIGHTNESS;
             brightnessIncreasing = true;
-            currentIndex++;
         } else {
-            currentIndex--;
+            currentBrightness -= stepSize;
         }
     }
 
-    setBrightness(levels[currentIndex]);
+    setBrightness(currentBrightness);
 
     // Show brightness level on screen briefly
     u8g2.clearBuffer();

@@ -43,15 +43,13 @@ String lastDisplayedModule = "";  // Track which module is currently shown
 // Function prototypes
 void handleButtonEvent(ButtonEvent event);
 void cycleToNextModule();
-void enterConfigMode();
-void confirmAndFactoryReset();
 void handleSerialCommand();
 
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.15-BRIGHTNESS ===");
-    Serial.println("Build: Brightness Control - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.16-HOLD-BRIGHTNESS ===");
+    Serial.println("Build: Hold-to-Adjust Brightness - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -281,21 +279,17 @@ void handleButtonEvent(ButtonEvent event) {
             cycleToNextModule();
             break;
 
-        case BRIGHTNESS_CYCLE:
+        case BRIGHTNESS_ADJUSTING:
+            // Continuously step brightness while held
             display.cycleBrightness();
-            // Save brightness to config
+            break;
+
+        case BRIGHTNESS_RELEASED:
+            // Save brightness when user releases button
             config["device"]["brightness"] = display.getBrightness();
             saveConfiguration();
-            // Return to normal display after 2 seconds
-            delay(2000);
-            break;
-
-        case LONG_PRESS:
-            enterConfigMode();
-            break;
-
-        case FACTORY_RESET:
-            confirmAndFactoryReset();
+            Serial.print("Brightness saved: ");
+            Serial.println(display.getBrightness());
             break;
 
         default:
@@ -353,48 +347,6 @@ void cycleToNextModule() {
 
     // Save active module to config (throttled)
     saveConfiguration();
-}
-
-void enterConfigMode() {
-    Serial.println("Entering configuration mode...");
-
-    // Show confirmation on display
-    display.clear();
-    display.showError("Entering Setup");
-    delay(2000);
-
-    // Clear WiFi config to force AP mode
-    config["wifi"]["ssid"] = "";
-    saveConfiguration();
-
-    delay(1000);
-    ESP.restart();
-}
-
-void confirmAndFactoryReset() {
-    Serial.println("FACTORY RESET INITIATED");
-
-    // Show countdown
-    for (int i = 3; i > 0; i--) {
-        Serial.print("Resetting in ");
-        Serial.print(i);
-        Serial.println("...");
-
-        char msg[20];
-        snprintf(msg, sizeof(msg), "Reset in %d", i);
-        display.showError(msg);
-        delay(1000);
-    }
-
-    // Perform factory reset
-    Serial.println("Formatting filesystem...");
-    LittleFS.format();
-
-    display.showError("Reset Complete");
-    delay(2000);
-
-    Serial.println("Restarting...");
-    ESP.restart();
 }
 
 void handleSerialCommand() {
@@ -462,7 +414,10 @@ void handleSerialCommand() {
         Serial.println("\nFactory reset in 3 seconds...");
         Serial.println("Press Ctrl+C to cancel\n");
         delay(3000);
-        confirmAndFactoryReset();
+        Serial.println("Formatting filesystem...");
+        LittleFS.format();
+        Serial.println("Restarting...");
+        ESP.restart();
     }
     else if (cmd == "restart") {
         Serial.println("\nRestarting device...\n");

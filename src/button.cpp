@@ -2,8 +2,9 @@
 
 ButtonHandler::ButtonHandler(uint8_t buttonPin, bool capacitiveTouch)
     : pin(buttonPin), lastState(false), pressStartTime(0),
-      lastDebounceTime(0), isPressed(false), touchBaseline(0),
-      touchThreshold(0), useCapacitiveTouch(capacitiveTouch) {
+      lastDebounceTime(0), isPressed(false), brightnessMode(false),
+      lastBrightnessStep(0), touchBaseline(0), touchThreshold(0),
+      useCapacitiveTouch(capacitiveTouch) {
 }
 
 void ButtonHandler::init() {
@@ -79,7 +80,29 @@ ButtonEvent ButtonHandler::check() {
         if (currentState && !isPressed) {
             isPressed = true;
             pressStartTime = now;
+            brightnessMode = false;
+            lastBrightnessStep = 0;
             Serial.println("Button touched");
+        }
+
+        // Button currently held - check for brightness mode
+        if (currentState && isPressed) {
+            unsigned long pressDuration = now - pressStartTime;
+
+            // Enter brightness mode after 4.2 seconds
+            if (pressDuration >= BRIGHTNESS_START) {
+                if (!brightnessMode) {
+                    brightnessMode = true;
+                    lastBrightnessStep = now;
+                    Serial.println("Entering brightness adjustment mode");
+                }
+
+                // Trigger brightness step every BRIGHTNESS_STEP_INTERVAL ms
+                if (now - lastBrightnessStep >= BRIGHTNESS_STEP_INTERVAL) {
+                    lastBrightnessStep = now;
+                    return BRIGHTNESS_ADJUSTING;
+                }
+            }
         }
 
         // Button released
@@ -91,16 +114,15 @@ ButtonEvent ButtonHandler::check() {
             Serial.print(pressDuration);
             Serial.println(" ms");
 
-            if (pressDuration >= FACTORY_RESET_MIN) {
-                Serial.println("Factory reset triggered");
-                return FACTORY_RESET;
-            } else if (pressDuration >= LONG_PRESS_MIN) {
-                Serial.println("Long press triggered (config mode)");
-                return LONG_PRESS;
-            } else if (pressDuration >= BRIGHTNESS_PRESS_MIN && pressDuration < BRIGHTNESS_PRESS_MAX) {
-                Serial.println("Brightness cycle triggered");
-                return BRIGHTNESS_CYCLE;
-            } else if (pressDuration >= DEBOUNCE_DELAY && pressDuration < SHORT_PRESS_MAX) {
+            // If releasing from brightness mode, return special event
+            if (brightnessMode) {
+                brightnessMode = false;
+                Serial.println("Brightness adjustment complete");
+                return BRIGHTNESS_RELEASED;
+            }
+
+            // Short press: cycle module
+            if (pressDuration >= DEBOUNCE_DELAY && pressDuration < SHORT_PRESS_MAX) {
                 Serial.println("Short press triggered (cycle module)");
                 return SHORT_PRESS;
             }

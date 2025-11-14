@@ -1,6 +1,6 @@
 {
   "name": "ESP32-C3 Data Tracker",
-  "version": "2.6.15-brightness",
+  "version": "2.6.16-hold-brightness",
   "home_assistant_domain": "esphome",
   "new_install_prompt_erase": true,
   "builds": [
