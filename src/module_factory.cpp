@@ -1,6 +1,7 @@
 #include "module_factory.h"
 #include "config.h"
 #include "network.h"
+#include "security.h"
 #include <ArduinoJson.h>
 
 // External references
@@ -399,19 +400,24 @@ public:
     }
 
     bool fetch(String& errorMsg) override {
-        // Generate random 6-digit security code
-        uint32_t code = 0;
-        for (int i = 0; i < 6; i++) {
-            code = code * 10 + random(0, 10);
-        }
+        // Use SecurityManager to generate code (keeps display and validation in sync)
+        extern SecurityManager security;
+        uint32_t code = security.generateNewCode();
 
+        // Calculate time remaining until expiration
+        unsigned long now = millis();
+        unsigned long generatedAt = now;
+        unsigned long expiresAt = generatedAt + 300000;  // 5 minutes
+        unsigned long timeRemaining = expiresAt - now;
+
+        // Store in config for display
         JsonObject data = config["modules"]["settings"];
         data["securityCode"] = code;
-        data["codeTimeRemaining"] = 300000;  // 5 minutes in milliseconds
+        data["codeTimeRemaining"] = timeRemaining;
         data["lastUpdate"] = millis() / 1000;
         data["lastSuccess"] = true;
 
-        Serial.print("Settings: Generated code ");
+        Serial.print("Settings: Generated code via SecurityManager: ");
         Serial.println(code);
 
         return true;
