@@ -1435,7 +1435,7 @@ void NetworkManager::setupSettingsServer() {
             return;
         }
 
-        StaticJsonDocument<4096> response;
+        StaticJsonDocument<6144> response;  // Increased from 4096 to 6144 for more modules
         JsonArray modulesArray = response.createNestedArray("modules");
 
         // Get module order
@@ -1483,6 +1483,13 @@ void NetworkManager::setupSettingsServer() {
                 moduleData["lastUpdate"] = moduleConfig["lastUpdate"];
                 moduleData["lastSuccess"] = moduleConfig["lastSuccess"];
             }
+        }
+
+        // Check for overflow
+        if (response.overflowed()) {
+            Serial.println("ERROR: /api/modules response overflowed!");
+            server->send(500, "application/json", "{\"error\":\"Too many modules\"}");
+            return;
         }
 
         String output;
