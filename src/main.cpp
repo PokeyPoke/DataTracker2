@@ -51,8 +51,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.22-BRIGHTNESS-CLEAN ===");
-    Serial.println("Build: Clean Brightness Mode - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.23-BRIGHTNESS-DEBUG2 ===");
+    Serial.println("Build: Debug Short Press Issue - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -234,13 +234,21 @@ void loop() {
     if (brightnessMode && lastBrightnessActivity > 0) {
         unsigned long elapsed = now - lastBrightnessActivity;
         if (elapsed > BRIGHTNESS_TIMEOUT) {
-            Serial.println("Brightness timeout - exiting mode");
+            Serial.print("Brightness timeout - elapsed=");
+            Serial.println(elapsed);
             brightnessMode = false;
             lastBrightnessActivity = 0;
             config["device"]["brightness"] = display.getBrightness();
             saveConfiguration();
         }
     }
+
+    // Debug: log any unexpected brightness mode exit
+    static bool wasBrightnessMode = false;
+    if (wasBrightnessMode && !brightnessMode) {
+        Serial.println("*** BRIGHTNESS MODE EXITED ***");
+    }
+    wasBrightnessMode = brightnessMode;
 
     // Monitor WiFi connection
     if (!network.isConnected()) {
@@ -299,8 +307,11 @@ void handleButtonEvent(ButtonEvent event) {
         case SHORT_PRESS:
             if (brightnessMode) {
                 // In brightness mode: cycle brightness level
+                Serial.println("SHORT_PRESS in brightness mode");
                 display.cycleBrightness();
-                lastBrightnessActivity = millis();  // Reset timeout
+                lastBrightnessActivity = millis();
+                Serial.print("Timer reset to: ");
+                Serial.println(lastBrightnessActivity);
             } else {
                 // Normal mode: cycle to next module
                 cycleToNextModule();
