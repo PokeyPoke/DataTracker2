@@ -51,8 +51,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.21-DEBUG ===");
-    Serial.println("Build: Debug Brightness Timeout - Nov 14 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.6.22-BRIGHTNESS-CLEAN ===");
+    Serial.println("Build: Clean Brightness Mode - Nov 14 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
@@ -230,32 +230,15 @@ void loop() {
     }
     #endif
 
-    // Check brightness mode timeout (only if we're in the mode and timer has been set)
-    if (brightnessMode) {
-        if (lastBrightnessActivity > 0) {
-            unsigned long elapsed = now - lastBrightnessActivity;
-            // Debug: print every 1000ms while in brightness mode
-            static unsigned long lastDebugPrint = 0;
-            if (now - lastDebugPrint > 1000) {
-                Serial.print("[BrightnessMode] elapsed=");
-                Serial.print(elapsed);
-                Serial.print("ms timeout=");
-                Serial.println(BRIGHTNESS_TIMEOUT);
-                lastDebugPrint = now;
-            }
-
-            if (elapsed > BRIGHTNESS_TIMEOUT) {
-                Serial.println("=== BRIGHTNESS TIMEOUT TRIGGERED ===");
-                brightnessMode = false;
-                lastBrightnessActivity = 0;  // Reset timer
-                // Save brightness setting
-                config["device"]["brightness"] = display.getBrightness();
-                saveConfiguration();
-                Serial.print("Brightness saved: ");
-                Serial.println(display.getBrightness());
-            }
-        } else {
-            Serial.println("[BrightnessMode ERROR] Timer not initialized!");
+    // Check brightness mode timeout
+    if (brightnessMode && lastBrightnessActivity > 0) {
+        unsigned long elapsed = now - lastBrightnessActivity;
+        if (elapsed > BRIGHTNESS_TIMEOUT) {
+            Serial.println("Brightness timeout - exiting mode");
+            brightnessMode = false;
+            lastBrightnessActivity = 0;
+            config["device"]["brightness"] = display.getBrightness();
+            saveConfiguration();
         }
     }
 
@@ -270,8 +253,12 @@ void loop() {
     // Run scheduler (fetch data if needed)
     scheduler.tick();
 
-    // Update display (skip if in brightness mode)
-    if (!brightnessMode) {
+    // Update display
+    if (brightnessMode) {
+        // In brightness mode: keep showing brightness screen (no need to update frequently)
+        // The brightness screen stays visible until mode exits
+    } else {
+        // Normal mode: show modules
         String activeModule = config["device"]["activeModule"] | "bitcoin";
         bool moduleChanged = (activeModule != lastDisplayedModule);
 
@@ -326,24 +313,15 @@ void handleButtonEvent(ButtonEvent event) {
 
             if (brightnessMode) {
                 // Entering brightness mode
-                Serial.println("=== ENTERING BRIGHTNESS MODE ===");
-                Serial.print("brightnessMode = ");
-                Serial.println(brightnessMode);
-                Serial.print("Setting lastBrightnessActivity to: ");
-                Serial.println(millis());
-                lastBrightnessActivity = millis();  // Start timeout timer
-                display.cycleBrightness();  // Show current brightness
-                Serial.println("Brightness screen displayed");
+                Serial.println("Entering brightness mode");
+                lastBrightnessActivity = millis();
+                display.cycleBrightness();
             } else {
                 // Exiting brightness mode
-                Serial.println("=== EXITING BRIGHTNESS MODE ===");
-                lastBrightnessActivity = 0;  // Reset timer
-                // Save brightness setting
+                Serial.println("Exiting brightness mode");
+                lastBrightnessActivity = 0;
                 config["device"]["brightness"] = display.getBrightness();
                 saveConfiguration();
-                Serial.print("Brightness saved: ");
-                Serial.println(display.getBrightness());
-                // Display will return to normal module in main loop
             }
             break;
 
