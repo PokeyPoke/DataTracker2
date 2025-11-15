@@ -451,12 +451,13 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             } else if (type === 'weather') {
                 form.innerHTML = `
                     <div class="form-group">
-                        <label>Location (City Name):</label>
-                        <input type="text" id="location" value="${data.location || ''}" placeholder="Enter city name" autocomplete="off">
-                        <small style="color: #888; font-size: 11px; display: block; margin-top: 4px;">
-                            Examples: "London", "New York", "Prague", "Ricany"<br>
-                            Just type the city name and click Save - no search needed!
-                        </small>
+                        <label>Search Location:</label>
+                        <input type="text" id="weather-search" placeholder="Start typing city name..." oninput="searchWeather(this.value)" autocomplete="off">
+                        <div id="weather-results" style="display:none; max-height:150px; overflow-y:auto; border:1px solid #ddd; margin-top:4px;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Selected Location:</label>
+                        <input type="text" id="location" value="${data.location || ''}" readonly style="background:#f5f5f5">
                     </div>
                 `;
             } else if (type === 'custom') {
@@ -574,6 +575,33 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             document.getElementById('stockName').value = name;
             document.getElementById('stock-search').value = '';
             document.getElementById('stock-results').style.display = 'none';
+        }
+        function searchWeather(query) {
+            clearTimeout(searchTimeout);
+            if (query.length < 2) {
+                document.getElementById('weather-results').style.display = 'none';
+                return;
+            }
+            const results = document.getElementById('weather-results');
+            results.innerHTML = '<div class="search-item">Searching...</div>';
+            results.style.display = 'block';
+            searchTimeout = setTimeout(() => {
+                fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`)
+                .then(r => r.json())
+                .then(d => {
+                    results.innerHTML = (d.results || []).map(city => `
+                        <div class="search-item" onclick="selectWeather('${city.name.replace(/'/g, "\\'")}')">
+                            ${city.name}${city.admin1 ? ', ' + city.admin1 : ''}${city.country ? ' (' + city.country + ')' : ''}
+                        </div>
+                    `).join('') || '<div class="search-item">No results</div>';
+                })
+                .catch(() => results.innerHTML = '<div class="search-item">Error searching</div>');
+            }, 300);
+        }
+        function selectWeather(location) {
+            document.getElementById('location').value = location;
+            document.getElementById('weather-search').value = '';
+            document.getElementById('weather-results').style.display = 'none';
         }
         function saveModule() {
             const type = currentModule.type;
