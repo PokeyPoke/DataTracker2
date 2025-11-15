@@ -281,16 +281,6 @@ void DisplayManager::showCrypto(const char* moduleId, float price, float change2
     currentState = NORMAL;
 }
 
-// Wrapper for backward compatibility
-void DisplayManager::showBitcoin(float price, float change24h, unsigned long lastUpdate, bool stale) {
-    showCrypto("bitcoin", price, change24h, lastUpdate, stale);
-}
-
-// Wrapper for backward compatibility
-void DisplayManager::showEthereum(float price, float change24h, unsigned long lastUpdate, bool stale) {
-    showCrypto("ethereum", price, change24h, lastUpdate, stale);
-}
-
 void DisplayManager::showStock(const char* ticker, float price, float change, unsigned long lastUpdate, bool stale) {
     // Get decimals from config
     JsonObject module = config["modules"]["stock"];
@@ -440,16 +430,8 @@ void DisplayManager::showModule(const char* moduleId) {
         Serial.print(", Price: $");
         Serial.println(price);
 
-        // All crypto modules use the same display format with $ symbol
-        // Call the generic showCrypto with the actual module ID for correct name display
-        if (strcmp(cryptoSymbol, "BTC") == 0) {
-            showBitcoin(price, change, lastUpdate, stale);
-        } else if (strcmp(cryptoSymbol, "ETH") == 0) {
-            showEthereum(price, change, lastUpdate, stale);
-        } else {
-            // Other cryptos (Solana, Doge, etc.) - use generic crypto display with correct module ID
-            showCrypto(moduleId, price, change, lastUpdate, stale);
-        }
+        // All crypto modules use the same display format
+        showCrypto(moduleId, price, change, lastUpdate, stale);
     }
     else if (moduleType == "stock") {
         const char* ticker = module["ticker"] | "STOCK";

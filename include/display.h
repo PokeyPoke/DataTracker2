@@ -48,9 +48,7 @@ public:
     void showError(const char* message);
 
     // Module-specific display functions
-    void showCrypto(const char* moduleId, float price, float change24h, unsigned long lastUpdate, bool stale);  // Generic crypto display
-    void showBitcoin(float price, float change24h, unsigned long lastUpdate, bool stale);
-    void showEthereum(float price, float change24h, unsigned long lastUpdate, bool stale);
+    void showCrypto(const char* moduleId, float price, float change24h, unsigned long lastUpdate, bool stale);
     void showStock(const char* ticker, float price, float change, unsigned long lastUpdate, bool stale);
     void showWeather(float temp, const char* condition, const char* location, unsigned long lastUpdate, bool stale);
     void showCustom(float value, const char* label, const char* unit, unsigned long lastUpdate);
