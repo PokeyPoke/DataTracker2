@@ -1816,6 +1816,9 @@ void NetworkManager::setupSettingsServer() {
         extern Scheduler scheduler;
         scheduler.loadModulesFromConfig();
 
+        // Trigger immediate fetch for the new module
+        scheduler.requestFetch(moduleId.c_str(), true);
+
         server->send(201, "application/json", "{\"success\":true,\"id\":\"" + moduleId + "\"}");
     });
 
