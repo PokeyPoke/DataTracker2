@@ -1302,18 +1302,39 @@ void NetworkManager::setupSettingsServer() {
 
         Serial.println("\n=== /api/force-weather called ===");
 
+        // Find weather module ID dynamically
+        String weatherModuleId = "";
+        JsonArray moduleOrder = config["device"]["moduleOrder"];
+        for (JsonVariant v : moduleOrder) {
+            String id = v.as<String>();
+            if (id.startsWith("weather")) {
+                weatherModuleId = id;
+                break;
+            }
+        }
+
         // Check if weather module is registered
-        bool hasWeather = scheduler.hasModule("weather");
+        bool hasWeather = false;
+        if (weatherModuleId.length() > 0) {
+            hasWeather = scheduler.hasModule(weatherModuleId.c_str());
+        }
         int moduleCount = scheduler.getModuleCount();
 
-        // Force a weather fetch
-        scheduler.requestFetch("weather", true);
-
-        // Wait a moment
-        delay(3000);
+        // Force a weather fetch if found
+        if (weatherModuleId.length() > 0) {
+            Serial.print("Found weather module: ");
+            Serial.println(weatherModuleId);
+            scheduler.requestFetch(weatherModuleId.c_str(), true);
+            delay(3000);
+        } else {
+            Serial.println("No weather module found in moduleOrder");
+        }
 
         // Check result
-        JsonObject weather = config["modules"]["weather"];
+        JsonObject weather;
+        if (weatherModuleId.length() > 0) {
+            weather = config["modules"][weatherModuleId];
+        }
         unsigned long lastUpdate = weather["lastUpdate"] | 0;
         float temp = weather["temperature"] | 0.0;
         String condition = weather["condition"] | "Unknown";
@@ -1325,6 +1346,7 @@ void NetworkManager::setupSettingsServer() {
 
         String response = "{";
         response += "\"triggered\":true,";
+        response += "\"weatherModuleId\":\"" + weatherModuleId + "\",";
         response += "\"moduleCount\":" + String(moduleCount) + ",";
         response += "\"hasWeather\":" + String(hasWeather ? "true" : "false") + ",";
         response += "\"location\":\"" + location + "\",";
@@ -1367,18 +1389,42 @@ void NetworkManager::setupSettingsServer() {
         // Registered modules from scheduler
         html += "<h2>Registered Modules (in scheduler):</h2><pre>";
         html += "Count: " + String(scheduler.getModuleCount()) + "\n";
-        html += "Has weather: " + String(scheduler.hasModule("weather") ? "YES" : "NO") + "\n";
+
+        // Find actual weather module ID (could be "weather" or "weather_timestamp")
+        String weatherModuleId = "";
+        for (JsonVariant v : moduleOrder) {
+            String id = v.as<String>();
+            if (id.startsWith("weather")) {
+                weatherModuleId = id;
+                break;
+            }
+        }
+
+        if (weatherModuleId.length() > 0) {
+            html += "Weather module ID: " + weatherModuleId + "\n";
+            html += "Has weather registered: " + String(scheduler.hasModule(weatherModuleId.c_str()) ? "YES" : "NO") + "\n";
+        } else {
+            html += "No weather module found in moduleOrder\n";
+        }
         html += "</pre>";
 
-        // Weather module config
+        // Weather module config (using actual ID)
         html += "<h2>Weather Config:</h2><pre>";
-        JsonObject weather = config["modules"]["weather"];
-        if (weather.isNull()) {
-            html += "Weather config is NULL\n";
+        if (weatherModuleId.length() > 0) {
+            JsonObject weather = config["modules"][weatherModuleId];
+            if (weather.isNull()) {
+                html += "Weather config is NULL (ID: " + weatherModuleId + ")\n";
+            } else {
+                html += "Module ID: " + weatherModuleId + "\n";
+                html += "Type: " + String(weather["type"] | "missing") + "\n";
+                html += "Location: " + String(weather["location"] | "missing") + "\n";
+                html += "Temperature: " + String(weather["temperature"] | 0.0, 1) + "\n";
+                html += "Latitude: " + String(weather["latitude"] | 0.0, 4) + "\n";
+                html += "Longitude: " + String(weather["longitude"] | 0.0, 4) + "\n";
+                html += "Last Update: " + String(weather["lastUpdate"] | 0) + "\n";
+            }
         } else {
-            html += "Type: " + String(weather["type"] | "missing") + "\n";
-            html += "Location: " + String(weather["location"] | "missing") + "\n";
-            html += "Temperature: " + String(weather["temperature"] | 0.0, 1) + "\n";
+            html += "No weather module ID found\n";
         }
         html += "</pre>";
 
