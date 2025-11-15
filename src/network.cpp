@@ -1348,6 +1348,44 @@ void NetworkManager::setupSettingsServer() {
         server->send(200, "text/plain", lastSaveResult);
     });
 
+    // Module list debug (no auth)
+    server->on("/modules-debug", HTTP_GET, [this]() {
+        extern Scheduler scheduler;
+        String html = "<html><head><title>Modules Debug</title>";
+        html += "<style>body{font-family:monospace;padding:20px}pre{background:#f5f5f5;padding:10px}</style>";
+        html += "</head><body><h1>Modules Debug</h1>";
+
+        // Module order from config
+        html += "<h2>Module Order (from config):</h2><pre>";
+        JsonArray moduleOrder = config["device"]["moduleOrder"];
+        html += "Count: " + String(moduleOrder.size()) + "\n";
+        for (JsonVariant v : moduleOrder) {
+            html += "- " + v.as<String>() + "\n";
+        }
+        html += "</pre>";
+
+        // Registered modules from scheduler
+        html += "<h2>Registered Modules (in scheduler):</h2><pre>";
+        html += "Count: " + String(scheduler.getModuleCount()) + "\n";
+        html += "Has weather: " + String(scheduler.hasModule("weather") ? "YES" : "NO") + "\n";
+        html += "</pre>";
+
+        // Weather module config
+        html += "<h2>Weather Config:</h2><pre>";
+        JsonObject weather = config["modules"]["weather"];
+        if (weather.isNull()) {
+            html += "Weather config is NULL\n";
+        } else {
+            html += "Type: " + String(weather["type"] | "missing") + "\n";
+            html += "Location: " + String(weather["location"] | "missing") + "\n";
+            html += "Temperature: " + String(weather["temperature"] | 0.0, 1) + "\n";
+        }
+        html += "</pre>";
+
+        html += "</body></html>";
+        server->send(200, "text/html", html);
+    });
+
     // Weather debug page (no auth for debugging)
     server->on("/weather-debug", HTTP_GET, [this]() {
         String html = "<!DOCTYPE html><html><head><title>Weather Debug</title>";
