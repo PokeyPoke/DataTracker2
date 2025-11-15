@@ -654,7 +654,38 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
         bool hasCurrency;  // true if value should be prefixed with small $
     };
 
-    auto getModuleData = [](const char* moduleId) -> ModuleData {
+    // Helper to apply common abbreviations
+    auto abbreviate = [](String text) -> String {
+        // City abbreviations
+        if (text == "San Francisco") return "SF";
+        if (text == "Los Angeles") return "LA";
+        if (text == "New York") return "NY";
+        if (text == "Washington") return "DC";
+        if (text == "Las Vegas") return "Vegas";
+        if (text == "Saint Petersburg") return "St Pete";
+        if (text == "Salt Lake City") return "SLC";
+
+        // Common label abbreviations
+        if (text == "Temperature") return "Temp";
+        if (text == "Humidity") return "Humid";
+        if (text == "Pressure") return "Press";
+        if (text == "Precipitation") return "Precip";
+        if (text == "Visibility") return "Vis";
+        if (text == "Wind Speed") return "Wind";
+        if (text == "Battery") return "Batt";
+        if (text == "Voltage") return "Volt";
+        if (text == "Current") return "Curr";
+        if (text == "Power") return "Pwr";
+
+        // If no abbreviation found and text is too long, truncate
+        if (text.length() > 10) {
+            return text.substring(0, 10);
+        }
+
+        return text;
+    };
+
+    auto getModuleData = [&abbreviate](const char* moduleId) -> ModuleData {
         if (strlen(moduleId) == 0) return {"", "---", false};
 
         JsonObject module = config["modules"][moduleId];
@@ -718,15 +749,15 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
             float temp = module["temperature"] | 0.0;
             String location = module["location"] | "";
             String unit = module["unit"] | "C";
-            // Truncate location if too long (5x7 font, ~64px width = ~12 chars max)
-            if (location.length() > 10) location = location.substring(0, 10);
+            // Apply abbreviations (e.g., "San Francisco" -> "SF", or truncate if too long)
+            location = abbreviate(location);
             return {location, String(temp, 1) + "°" + unit, false};
         } else if (type == "custom") {
             float value = module["value"] | 0.0;
             String label = module["label"] | "";
             String unit = module["unit"] | "";
-            // Truncate label if too long (5x7 font, ~64px width = ~12 chars max)
-            if (label.length() > 10) label = label.substring(0, 10);
+            // Apply abbreviations (e.g., "Temperature" -> "Temp", or truncate if too long)
+            label = abbreviate(label);
             return {label, String(value, 1) + unit, false};
         }
 
