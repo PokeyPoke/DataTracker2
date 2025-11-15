@@ -101,15 +101,26 @@ public:
         }
 
         // wttr.in returns temperature as string
-        float temp = atof(current["temp_C"] | "0");
+        const char* tempStr = current["temp_C"] | "0";
+        float temp = atof(tempStr);
 
         // Get weather condition
         String condition = current["weatherDesc"][0]["value"] | "Unknown";
 
-        Serial.print("Weather: Parsed - Temp: ");
+        Serial.print("Weather: RAW temp_C string: '");
+        Serial.print(tempStr);
+        Serial.print("', Parsed as float: ");
         Serial.print(temp, 1);
         Serial.print("°C, Condition: ");
         Serial.println(condition);
+
+        // Also check if temp_F exists and what it is
+        if (current.containsKey("temp_F")) {
+            const char* tempFStr = current["temp_F"] | "0";
+            Serial.print("Weather: Also found temp_F: '");
+            Serial.print(tempFStr);
+            Serial.println("'");
+        }
 
         // Update cache (use reference, NOT .to<JsonObject>() which clears everything!)
         JsonObject data = config["modules"]["weather"];
