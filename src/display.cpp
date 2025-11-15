@@ -161,7 +161,7 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
 
     u8g2.clearBuffer();
 
-    // Price with smart formatting - larger, moved up
+    // Price with smart formatting - centered vertically
     char priceStr[16];
     if (price >= 10000) {
         snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
@@ -177,18 +177,17 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
         snprintf(priceStr, sizeof(priceStr), "$%.6f", price);
     }
 
-    // Use larger font and position higher
+    // Use larger font and position to avoid clipping at top
     u8g2.setFont(u8g2_font_logisoso32_tn);
     int priceWidth = u8g2.getStrWidth(priceStr);
-    u8g2.drawStr((128 - priceWidth) / 2, 30, priceStr);
+    u8g2.drawStr((128 - priceWidth) / 2, 38, priceStr);
 
-    // Change percentage - centered below price
-    u8g2.setFont(u8g2_font_helvB10_tr);
-    char changeStr[20];
+    // Change percentage - bottom left corner with smaller font
+    u8g2.setFont(u8g2_font_6x10_tr);
+    char changeStr[16];
     const char* sign = (change24h >= 0) ? "+" : "-";
-    snprintf(changeStr, sizeof(changeStr), "%s%.1f%% (24h)", sign, fabs(change24h));
-    int changeWidth = u8g2.getStrWidth(changeStr);
-    u8g2.drawStr((128 - changeWidth) / 2, 48, changeStr);
+    snprintf(changeStr, sizeof(changeStr), "%s%.1f%%", sign, fabs(change24h));
+    u8g2.drawStr(2, 62, changeStr);
 
     // Status bar with label in bottom right
     drawStatusBar(WiFi.isConnected(), lastUpdate, stale, cryptoNameStr.c_str());
@@ -204,7 +203,7 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
 
     u8g2.clearBuffer();
 
-    // Price with smart formatting - larger, moved up
+    // Price with smart formatting - centered vertically
     char priceStr[16];
     if (price >= 10000) {
         snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
@@ -220,18 +219,17 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
         snprintf(priceStr, sizeof(priceStr), "$%.6f", price);
     }
 
-    // Use larger font and position higher
+    // Use larger font and position to avoid clipping at top
     u8g2.setFont(u8g2_font_logisoso32_tn);
     int priceWidth = u8g2.getStrWidth(priceStr);
-    u8g2.drawStr((128 - priceWidth) / 2, 30, priceStr);
+    u8g2.drawStr((128 - priceWidth) / 2, 38, priceStr);
 
-    // Change percentage - centered below price
-    u8g2.setFont(u8g2_font_helvB10_tr);
-    char changeStr[20];
+    // Change percentage - bottom left corner with smaller font
+    u8g2.setFont(u8g2_font_6x10_tr);
+    char changeStr[16];
     const char* sign = (change24h >= 0) ? "+" : "-";
-    snprintf(changeStr, sizeof(changeStr), "%s%.1f%% (24h)", sign, fabs(change24h));
-    int changeWidth = u8g2.getStrWidth(changeStr);
-    u8g2.drawStr((128 - changeWidth) / 2, 48, changeStr);
+    snprintf(changeStr, sizeof(changeStr), "%s%.1f%%", sign, fabs(change24h));
+    u8g2.drawStr(2, 62, changeStr);
 
     // Status bar with label in bottom right
     drawStatusBar(WiFi.isConnected(), lastUpdate, stale, cryptoNameStr.c_str());
@@ -243,7 +241,7 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
 void DisplayManager::showStock(const char* ticker, float price, float change, unsigned long lastUpdate, bool stale) {
     u8g2.clearBuffer();
 
-    // Price with smart formatting - larger, moved up
+    // Price with smart formatting - centered vertically
     char priceStr[16];
     if (price >= 10000) {
         snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
@@ -259,18 +257,17 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
         snprintf(priceStr, sizeof(priceStr), "$%.5f", price);
     }
 
-    // Use larger font and position higher
+    // Use larger font and position to avoid clipping at top
     u8g2.setFont(u8g2_font_logisoso32_tn);
     int priceWidth = u8g2.getStrWidth(priceStr);
-    u8g2.drawStr((128 - priceWidth) / 2, 30, priceStr);
+    u8g2.drawStr((128 - priceWidth) / 2, 38, priceStr);
 
-    // Change percentage - centered below price
-    u8g2.setFont(u8g2_font_helvB10_tr);
-    char changeStr[20];
+    // Change percentage - bottom left corner with smaller font
+    u8g2.setFont(u8g2_font_6x10_tr);
+    char changeStr[16];
     const char* sign = (change >= 0) ? "+" : "-";
-    snprintf(changeStr, sizeof(changeStr), "%s%.1f%% (today)", sign, fabs(change));
-    int changeWidth = u8g2.getStrWidth(changeStr);
-    u8g2.drawStr((128 - changeWidth) / 2, 48, changeStr);
+    snprintf(changeStr, sizeof(changeStr), "%s%.1f%%", sign, fabs(change));
+    u8g2.drawStr(2, 62, changeStr);
 
     // Status bar with ticker in bottom right
     drawStatusBar(WiFi.isConnected(), lastUpdate, stale, ticker);
@@ -282,22 +279,21 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
 void DisplayManager::showWeather(float temp, const char* condition, const char* location, unsigned long lastUpdate, bool stale) {
     u8g2.clearBuffer();
 
-    // Temperature - larger, positioned higher
+    // Temperature - centered vertically to avoid clipping
     char tempStr[16];
     snprintf(tempStr, sizeof(tempStr), "%.1f", temp);
 
     u8g2.setFont(u8g2_font_logisoso32_tn);
     int tempWidth = u8g2.getStrWidth(tempStr);
-    u8g2.drawStr((128 - tempWidth - 32) / 2, 28, tempStr);
+    u8g2.drawStr((128 - tempWidth - 32) / 2, 38, tempStr);
 
     // Degree symbol and C - use matching larger font
     u8g2.setFont(u8g2_font_logisoso32_tr);
-    u8g2.drawStr((128 - tempWidth - 32) / 2 + tempWidth + 4, 28, "°C");
+    u8g2.drawStr((128 - tempWidth - 32) / 2 + tempWidth + 4, 38, "°C");
 
-    // Condition - centered below temperature
-    u8g2.setFont(u8g2_font_helvB10_tr);
-    int condWidth = u8g2.getStrWidth(condition);
-    u8g2.drawStr((128 - condWidth) / 2, 46, condition);
+    // Condition - bottom left corner with smaller font
+    u8g2.setFont(u8g2_font_6x10_tr);
+    u8g2.drawStr(2, 62, condition);
 
     // Status bar with location in bottom right
     String cleanLocation = removeAccents(location);
@@ -310,19 +306,18 @@ void DisplayManager::showWeather(float temp, const char* condition, const char* 
 void DisplayManager::showCustom(float value, const char* label, const char* unit, unsigned long lastUpdate) {
     u8g2.clearBuffer();
 
-    // Value - larger, positioned higher
+    // Value - centered vertically to avoid clipping
     char valueStr[16];
     snprintf(valueStr, sizeof(valueStr), "%.2f", value);
 
     u8g2.setFont(u8g2_font_logisoso32_tn);
     int valueWidth = u8g2.getStrWidth(valueStr);
-    u8g2.drawStr((128 - valueWidth) / 2, 30, valueStr);
+    u8g2.drawStr((128 - valueWidth) / 2, 38, valueStr);
 
-    // Unit - centered below value
+    // Unit - bottom left corner with smaller font
     if (strlen(unit) > 0) {
-        u8g2.setFont(u8g2_font_helvB10_tr);
-        int unitWidth = u8g2.getStrWidth(unit);
-        u8g2.drawStr((128 - unitWidth) / 2, 48, unit);
+        u8g2.setFont(u8g2_font_6x10_tr);
+        u8g2.drawStr(2, 62, unit);
     }
 
     // Status bar with label in bottom right (never stale for manual entry)
