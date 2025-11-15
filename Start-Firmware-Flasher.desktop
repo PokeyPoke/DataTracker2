@@ -3,7 +3,7 @@ Version=1.0
 Type=Application
 Name=DataTracker2 Firmware Flasher
 Comment=Start local web server for ESP32 firmware flashing
-Exec=gnome-terminal -- bash -c 'cd /home/happyllama/DataTracker2/docs && PORT=8000; if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null 2>&1; then PORT=8080; fi; if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1; then PORT=8888; fi; echo "========================================="; echo "  ESP32 DataTracker2 Firmware Flasher"; echo "========================================="; echo ""; echo "Starting local web server..."; echo "Open your browser to:"; echo ""; echo "  http://localhost:$PORT"; echo ""; echo "Press Ctrl+C to stop the server"; echo "========================================="; echo ""; python3 -m http.server $PORT; exec bash'
+Exec=/home/happyllama/DataTracker2/start-webserver.sh
 Icon=application-x-executable
 Terminal=true
 Categories=Development;
