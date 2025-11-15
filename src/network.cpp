@@ -452,16 +452,8 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 form.innerHTML = `
                     <div class="form-group">
                         <label>Location:</label>
-                        <input type="text" id="location" value="${data.location || ''}" placeholder="Ricany" oninput="document.getElementById('location-hint').style.display = this.value ? 'block' : 'none'">
-                        <small id="location-hint" style="color: #888; font-size: 11px; display: none;">Uses wttr.in - supports city names, coordinates, airports, etc.</small>
-                    </div>
-                    <div class="form-group" style="display:none">
-                        <label>Latitude:</label>
-                        <input type="number" step="0.0001" id="latitude" value="${data.latitude || 37.7749}">
-                    </div>
-                    <div class="form-group" style="display:none">
-                        <label>Longitude:</label>
-                        <input type="number" step="0.0001" id="longitude" value="${data.longitude || -122.4194}">
+                        <input type="text" id="location" value="${data.location || ''}" placeholder="Ricany">
+                        <small style="color: #888; font-size: 11px; display: block; margin-top: 4px;">Enter city name (e.g., "London", "New York", "Prague")</small>
                     </div>
                 `;
             } else if (type === 'custom') {
@@ -580,35 +572,6 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             document.getElementById('stock-search').value = '';
             document.getElementById('stock-results').style.display = 'none';
         }
-        function searchWeather(query) {
-            clearTimeout(searchTimeout);
-            if (query.length < 2) {
-                document.getElementById('weather-results').style.display = 'none';
-                return;
-            }
-            const results = document.getElementById('weather-results');
-            results.innerHTML = '<div class="search-item">Searching...</div>';
-            results.style.display = 'block';
-            searchTimeout = setTimeout(() => {
-                fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=en&format=json`)
-                .then(r => r.json())
-                .then(d => {
-                    results.innerHTML = (d.results || []).map(city => `
-                        <div class="search-item" onclick="selectWeather('${city.name.replace(/'/g, "\\'")}', ${city.latitude}, ${city.longitude})">
-                            ${city.name}${city.admin1 ? ', ' + city.admin1 : ''}${city.country ? ' (' + city.country + ')' : ''}
-                        </div>
-                    `).join('') || '<div class="search-item">No results</div>';
-                })
-                .catch(() => results.innerHTML = '<div class="search-item">Error searching</div>');
-            }, 300);
-        }
-        function selectWeather(location, lat, lon) {
-            document.getElementById('location').value = location;
-            document.getElementById('latitude').value = lat;
-            document.getElementById('longitude').value = lon;
-            document.getElementById('weather-search').value = '';
-            document.getElementById('weather-results').style.display = 'none';
-        }
         function saveModule() {
             const type = currentModule.type;
             const isNew = !modules.find(m => m.id === currentModule.id);
@@ -632,8 +595,7 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 if (!data.ticker) { showMessage('Please enter a ticker symbol', 'error'); return; }
             } else if (type === 'weather') {
                 data.location = document.getElementById('location').value;
-                data.latitude = parseFloat(document.getElementById('latitude').value) || 0;
-                data.longitude = parseFloat(document.getElementById('longitude').value) || 0;
+                // No latitude/longitude needed - wttr.in accepts city names directly
                 if (!data.location) { showMessage('Please enter a location', 'error'); return; }
             } else if (type === 'custom') {
                 data.label = document.getElementById('label').value;
@@ -2137,75 +2099,17 @@ void NetworkManager::handleUpdateConfig() {
             }
         }
 
-        // Update weather config
+        // Update weather config (wttr.in only needs location text, no lat/lon)
         if (modules.containsKey("weather")) {
             Serial.println("=== Processing weather config update ===");
-
-            // Debug: Check what fields exist in the incoming weather object
-            JsonObject incomingWeather = modules["weather"];
-            lastSaveResult = "Weather object has " + String(incomingWeather.size()) + " fields:\n";
-            for (JsonPair kv : incomingWeather) {
-                lastSaveResult += "  " + String(kv.key().c_str()) + " = " + kv.value().as<String>() + "\n";
-            }
-            Serial.print(lastSaveResult);
 
             if (modules["weather"].containsKey("location")) {
                 String location = modules["weather"]["location"].as<String>();
                 config["modules"]["weather"]["location"] = location;
                 Serial.print("Weather location set to: ");
                 Serial.println(location);
-            }
-
-            if (modules["weather"].containsKey("latitude")) {
-                float lat = modules["weather"]["latitude"].as<float>();
-
-                // Check config memory BEFORE assignment
-                size_t memBefore = config.memoryUsage();
-
-                config["modules"]["weather"]["latitude"] = lat;
-
-                // Check if assignment worked
-                size_t memAfter = config.memoryUsage();
-                bool overflowed = config.overflowed();
-
-                lastSaveResult += "Latitude assignment: before=" + String(memBefore) + ", after=" + String(memAfter) + ", overflowed=" + String(overflowed ? "YES" : "no") + "\n";
-
-                Serial.print("Weather latitude set to: ");
-                Serial.println(lat, 6);
-                Serial.print("Config memory: ");
-                Serial.print(memAfter);
-                Serial.print(" / ");
-                Serial.print(config.capacity());
-                Serial.print(", overflowed: ");
-                Serial.println(overflowed ? "YES!" : "no");
             } else {
-                Serial.println("WARNING: No latitude in request!");
-            }
-
-            if (modules["weather"].containsKey("longitude")) {
-                float lon = modules["weather"]["longitude"].as<float>();
-
-                // Check config memory BEFORE assignment
-                size_t memBefore = config.memoryUsage();
-
-                config["modules"]["weather"]["longitude"] = lon;
-
-                // Check if assignment worked
-                size_t memAfter = config.memoryUsage();
-                bool overflowed = config.overflowed();
-
-                lastSaveResult += "Longitude assignment: before=" + String(memBefore) + ", after=" + String(memAfter) + ", overflowed=" + String(overflowed ? "YES" : "no") + "\n";
-
-                Serial.print("Weather longitude set to: ");
-                Serial.println(lon, 6);
-                Serial.print("Config memory: ");
-                Serial.print(memAfter);
-                Serial.print(" / ");
-                Serial.print(config.capacity());
-                Serial.print(", overflowed: ");
-                Serial.println(overflowed ? "YES!" : "no");
-            } else {
-                Serial.println("WARNING: No longitude in request!");
+                Serial.println("WARNING: No location in weather update request!");
             }
 
             // Clear cached weather data to force fresh fetch
@@ -2215,26 +2119,6 @@ void NetworkManager::handleUpdateConfig() {
             config["modules"]["weather"]["lastSuccess"] = false;
 
             Serial.println("Weather cache cleared, will fetch on next cycle");
-
-            // Verify what's actually in config now
-            Serial.println("=== VERIFICATION: What's in config after update ===");
-            JsonObject verifyWeather = config["modules"]["weather"];
-
-            lastSaveResult += "\nVERIFICATION after assignments:\n";
-            lastSaveResult += "  location: " + String(verifyWeather["location"] | "MISSING") + "\n";
-            lastSaveResult += "  latitude: " + String(verifyWeather["latitude"] | 0.0, 6) + "\n";
-            lastSaveResult += "  longitude: " + String(verifyWeather["longitude"] | 0.0, 6) + "\n";
-            lastSaveResult += "  location exists: " + String(verifyWeather.containsKey("location") ? "yes" : "NO") + "\n";
-            lastSaveResult += "  latitude exists: " + String(verifyWeather.containsKey("latitude") ? "yes" : "NO") + "\n";
-            lastSaveResult += "  longitude exists: " + String(verifyWeather.containsKey("longitude") ? "yes" : "NO") + "\n";
-
-            Serial.print("  location: ");
-            Serial.println(verifyWeather["location"] | "MISSING");
-            Serial.print("  latitude: ");
-            Serial.println(verifyWeather["latitude"] | 0.0, 6);
-            Serial.print("  longitude: ");
-            Serial.println(verifyWeather["longitude"] | 0.0, 6);
-            Serial.println("===================================================");
         }
 
         // Update custom config
