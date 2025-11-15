@@ -151,7 +151,16 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                         <option value="BRL">Brazilian Real (BRL)</option>
                     </select>
                 </div>
-                <button onclick="saveCurrency()">Save Currency</button>
+                <div class="form-group">
+                    <label>Thousand Separator:</label>
+                    <select id="thousandSep">
+                        <option value=",">Comma (1,000)</option>
+                        <option value=".">Period (1.000)</option>
+                        <option value=" ">Space (1 000)</option>
+                        <option value="">None (1000)</option>
+                    </select>
+                </div>
+                <button onclick="saveDeviceSettings()">Save Settings</button>
             </div>
             <div class="mt-20">
                 <button class="danger" onclick="restartDevice()">Restart Device</button>
@@ -253,6 +262,7 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             .then(r => r.json())
             .then(d => {
                 document.getElementById('currency').value = d.device.currency || 'USD';
+                document.getElementById('thousandSep').value = d.device.thousandSep !== undefined ? d.device.thousandSep : ',';
             });
         }
         function renderModules() {
@@ -671,16 +681,17 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             })
             .catch(e => showMessage('Failed to delete module', 'error'));
         }
-        function saveCurrency() {
+        function saveDeviceSettings() {
             const currency = document.getElementById('currency').value;
+            const thousandSep = document.getElementById('thousandSep').value;
             fetch('/api/config', {
                 method: 'POST',
                 headers: {'Authorization': token, 'Content-Type': 'application/json'},
-                body: JSON.stringify({device: {currency: currency}})
+                body: JSON.stringify({device: {currency: currency, thousandSep: thousandSep}})
             })
             .then(r => r.json())
-            .then(d => showMessage('Currency saved', 'success'))
-            .catch(e => showMessage('Failed to save currency', 'error'));
+            .then(d => showMessage('Settings saved', 'success'))
+            .catch(e => showMessage('Failed to save settings', 'error'));
         }
         function restartDevice() {
             if (!confirm('Restart device? This will disconnect you.')) return;

@@ -79,27 +79,72 @@ void DisplayManager::drawCenteredValue(const char* value, int y) {
     u8g2.drawStr((128 - width) / 2, y, value);
 }
 
+// Helper to add thousand separators to a number string
+void addThousandSeparators(char* dest, const char* src, char separator) {
+    int len = strlen(src);
+    int dotPos = -1;
+
+    // Find decimal point
+    for (int i = 0; i < len; i++) {
+        if (src[i] == '.') {
+            dotPos = i;
+            break;
+        }
+    }
+
+    int wholeLen = (dotPos >= 0) ? dotPos : len;
+    int destIdx = 0;
+
+    // Copy whole number part with separators
+    for (int i = 0; i < wholeLen; i++) {
+        if (i > 0 && (wholeLen - i) % 3 == 0 && separator != '\0') {
+            dest[destIdx++] = separator;
+        }
+        dest[destIdx++] = src[i];
+    }
+
+    // Copy decimal part if exists
+    if (dotPos >= 0) {
+        for (int i = dotPos; i < len; i++) {
+            dest[destIdx++] = src[i];
+        }
+    }
+
+    dest[destIdx] = '\0';
+}
+
 // Helper to format price with smart decimals or user override
 void formatPrice(char* buffer, size_t bufSize, float price, int userDecimals) {
+    char tempBuf[32];
+    const char* sepStr = config["device"]["thousandSep"] | ",";
+    char separator = sepStr[0];
+
+    // Format number without thousand separators first
     if (userDecimals >= 0) {
-        // User specified decimals
-        snprintf(buffer, bufSize, "$%.*f", userDecimals, price);
+        snprintf(tempBuf, sizeof(tempBuf), "%.*f", userDecimals, price);
     } else {
         // Auto decimals based on price magnitude
         if (price >= 10000) {
-            snprintf(buffer, bufSize, "$%.0f", price);
+            snprintf(tempBuf, sizeof(tempBuf), "%.0f", price);
         } else if (price >= 1000) {
-            snprintf(buffer, bufSize, "$%.0f", price);  // BTC/ETH: no decimals
+            snprintf(tempBuf, sizeof(tempBuf), "%.0f", price);
         } else if (price >= 100) {
-            snprintf(buffer, bufSize, "$%.0f", price);
+            snprintf(tempBuf, sizeof(tempBuf), "%.0f", price);
         } else if (price >= 1) {
-            snprintf(buffer, bufSize, "$%.2f", price);
+            snprintf(tempBuf, sizeof(tempBuf), "%.2f", price);
         } else if (price >= 0.001) {
-            snprintf(buffer, bufSize, "$%.4f", price);
+            snprintf(tempBuf, sizeof(tempBuf), "%.4f", price);
         } else {
-            snprintf(buffer, bufSize, "$%.6f", price);
+            snprintf(tempBuf, sizeof(tempBuf), "%.6f", price);
         }
     }
+
+    // Add thousand separators
+    char formattedNum[32];
+    addThousandSeparators(formattedNum, tempBuf, separator);
+
+    // Add $ prefix
+    snprintf(buffer, bufSize, "$%s", formattedNum);
 }
 
 void DisplayManager::drawHeader(const char* title) {
@@ -185,15 +230,14 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
 
     u8g2.clearBuffer();
 
-    // Price with smart formatting and currency symbol
+    // Format price with thousand separators
     char priceStr[20];
     formatPrice(priceStr, sizeof(priceStr), price, decimals);
 
-    // Use logisoso38 with symbols (_tr not _tn), or logisoso32 if text is too long
+    // Use large font with symbols, auto-scale if too wide
     u8g2.setFont(u8g2_font_logisoso38_tr);
     int priceWidth = u8g2.getStrWidth(priceStr);
 
-    // If too wide, fall back to smaller font
     if (priceWidth > 120) {
         u8g2.setFont(u8g2_font_logisoso32_tr);
         priceWidth = u8g2.getStrWidth(priceStr);
@@ -201,17 +245,17 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
 
     u8g2.drawStr((128 - priceWidth) / 2, 40, priceStr);
 
-    // Thin divider line between value and bottom info
+    // Thin divider line
     u8g2.drawHLine(0, 52, 128);
 
-    // Change percentage - bottom left corner
+    // Change percentage - bottom left
     u8g2.setFont(u8g2_font_6x10_tr);
     char changeStr[16];
     const char* sign = (change24h >= 0) ? "+" : "-";
     snprintf(changeStr, sizeof(changeStr), "%s%.1f%%", sign, fabs(change24h));
     u8g2.drawStr(2, 62, changeStr);
 
-    // Status bar with label in bottom right
+    // Label in bottom right
     drawStatusBar(WiFi.isConnected(), lastUpdate, stale, cryptoNameStr.c_str());
 
     u8g2.sendBuffer();
@@ -314,7 +358,10 @@ void DisplayManager::showWeather(float temp, const char* condition, const char* 
     u8g2.setFont(u8g2_font_logisoso32_tr);
     u8g2.drawStr((128 - tempWidth - 32) / 2 + tempWidth + 4, 38, "°C");
 
-    // Condition - bottom left corner with smaller font
+    // Thin divider line
+    u8g2.drawHLine(0, 52, 128);
+
+    // Condition - bottom left corner
     u8g2.setFont(u8g2_font_6x10_tr);
     u8g2.drawStr(2, 62, condition);
 
@@ -335,9 +382,12 @@ void DisplayManager::showCustom(float value, const char* label, const char* unit
 
     u8g2.setFont(u8g2_font_logisoso32_tn);
     int valueWidth = u8g2.getStrWidth(valueStr);
-    u8g2.drawStr((128 - valueWidth) / 2, 38, valueStr);
+    u8g2.drawStr((128 - valueWidth) / 2, 40, valueStr);
 
-    // Unit - bottom left corner with smaller font
+    // Thin divider line
+    u8g2.drawHLine(0, 52, 128);
+
+    // Unit - bottom left corner
     if (strlen(unit) > 0) {
         u8g2.setFont(u8g2_font_6x10_tr);
         u8g2.drawStr(2, 62, unit);
