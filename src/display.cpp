@@ -230,20 +230,38 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
 
     u8g2.clearBuffer();
 
-    // Format price with thousand separators
+    // Format price with thousand separators (includes $)
     char priceStr[20];
     formatPrice(priceStr, sizeof(priceStr), price, decimals);
 
-    // Use large font with symbols, auto-scale if too wide
-    u8g2.setFont(u8g2_font_logisoso38_tr);
-    int priceWidth = u8g2.getStrWidth(priceStr);
+    // Remove $ from string (we'll draw it separately)
+    const char* numOnly = priceStr + 1;  // Skip first char ($)
 
-    if (priceWidth > 120) {
+    // Large number font
+    u8g2.setFont(u8g2_font_logisoso38_tr);
+    int numWidth = u8g2.getStrWidth(numOnly);
+    bool useLargeFont = true;
+
+    if (numWidth > 115) {
         u8g2.setFont(u8g2_font_logisoso32_tr);
-        priceWidth = u8g2.getStrWidth(priceStr);
+        numWidth = u8g2.getStrWidth(numOnly);
+        useLargeFont = false;
     }
 
-    u8g2.drawStr((128 - priceWidth) / 2, 40, priceStr);
+    // Small $ symbol
+    u8g2.setFont(u8g2_font_6x10_tr);
+    int dollarWidth = u8g2.getStrWidth("$");
+
+    // Center the whole thing ($ + number)
+    int totalWidth = dollarWidth + 2 + numWidth;
+    int startX = (128 - totalWidth) / 2;
+
+    // Draw small $ aligned to top of numbers
+    u8g2.drawStr(startX, useLargeFont ? 18 : 20, "$");
+
+    // Draw large number
+    u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tr : u8g2_font_logisoso32_tr);
+    u8g2.drawStr(startX + dollarWidth + 2, 40, numOnly);
 
     // Thin divider line
     u8g2.drawHLine(0, 52, 128);
@@ -270,21 +288,38 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
 
     u8g2.clearBuffer();
 
-    // Price with smart formatting and currency symbol
+    // Format price with thousand separators (includes $)
     char priceStr[20];
     formatPrice(priceStr, sizeof(priceStr), price, decimals);
 
-    // Use logisoso38 with symbols (_tr not _tn), or logisoso32 if text is too long
-    u8g2.setFont(u8g2_font_logisoso38_tr);
-    int priceWidth = u8g2.getStrWidth(priceStr);
+    // Remove $ from string (we'll draw it separately)
+    const char* numOnly = priceStr + 1;  // Skip first char ($)
 
-    // If too wide, fall back to smaller font
-    if (priceWidth > 120) {
+    // Large number font
+    u8g2.setFont(u8g2_font_logisoso38_tr);
+    int numWidth = u8g2.getStrWidth(numOnly);
+    bool useLargeFont = true;
+
+    if (numWidth > 115) {
         u8g2.setFont(u8g2_font_logisoso32_tr);
-        priceWidth = u8g2.getStrWidth(priceStr);
+        numWidth = u8g2.getStrWidth(numOnly);
+        useLargeFont = false;
     }
 
-    u8g2.drawStr((128 - priceWidth) / 2, 40, priceStr);
+    // Small $ symbol
+    u8g2.setFont(u8g2_font_6x10_tr);
+    int dollarWidth = u8g2.getStrWidth("$");
+
+    // Center the whole thing ($ + number)
+    int totalWidth = dollarWidth + 2 + numWidth;
+    int startX = (128 - totalWidth) / 2;
+
+    // Draw small $ aligned to top of numbers
+    u8g2.drawStr(startX, useLargeFont ? 18 : 20, "$");
+
+    // Draw large number
+    u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tr : u8g2_font_logisoso32_tr);
+    u8g2.drawStr(startX + dollarWidth + 2, 40, numOnly);
 
     // Thin divider line between value and bottom info
     u8g2.drawHLine(0, 52, 128);
@@ -310,21 +345,38 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
 
     u8g2.clearBuffer();
 
-    // Price with smart formatting and currency symbol
+    // Format price with thousand separators (includes $)
     char priceStr[20];
     formatPrice(priceStr, sizeof(priceStr), price, decimals);
 
-    // Use logisoso38 with symbols (_tr not _tn), or logisoso32 if text is too long
-    u8g2.setFont(u8g2_font_logisoso38_tr);
-    int priceWidth = u8g2.getStrWidth(priceStr);
+    // Remove $ from string (we'll draw it separately)
+    const char* numOnly = priceStr + 1;  // Skip first char ($)
 
-    // If too wide, fall back to smaller font
-    if (priceWidth > 120) {
+    // Large number font
+    u8g2.setFont(u8g2_font_logisoso38_tr);
+    int numWidth = u8g2.getStrWidth(numOnly);
+    bool useLargeFont = true;
+
+    if (numWidth > 115) {
         u8g2.setFont(u8g2_font_logisoso32_tr);
-        priceWidth = u8g2.getStrWidth(priceStr);
+        numWidth = u8g2.getStrWidth(numOnly);
+        useLargeFont = false;
     }
 
-    u8g2.drawStr((128 - priceWidth) / 2, 40, priceStr);
+    // Small $ symbol
+    u8g2.setFont(u8g2_font_6x10_tr);
+    int dollarWidth = u8g2.getStrWidth("$");
+
+    // Center the whole thing ($ + number)
+    int totalWidth = dollarWidth + 2 + numWidth;
+    int startX = (128 - totalWidth) / 2;
+
+    // Draw small $ aligned to top of numbers
+    u8g2.drawStr(startX, useLargeFont ? 18 : 20, "$");
+
+    // Draw large number
+    u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tr : u8g2_font_logisoso32_tr);
+    u8g2.drawStr(startX + dollarWidth + 2, 40, numOnly);
 
     // Thin divider line between value and bottom info
     u8g2.drawHLine(0, 52, 128);
@@ -659,17 +711,18 @@ void DisplayManager::showSettings(uint32_t securityCode, const char* deviceIP, u
 void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const char* slot3, const char* slot4, unsigned long lastUpdate, bool stale) {
     u8g2.clearBuffer();
 
-    // Helper struct to hold label and value separately
+    // Helper struct to hold label, value, and whether it has a currency symbol
     struct ModuleData {
         String label;
         String value;
+        bool hasCurrency;  // true if value should be prefixed with small $
     };
 
     auto getModuleData = [](const char* moduleId) -> ModuleData {
-        if (strlen(moduleId) == 0) return {"", "---"};
+        if (strlen(moduleId) == 0) return {"", "---", false};
 
         JsonObject module = config["modules"][moduleId];
-        if (module.isNull()) return {"", "N/A"};
+        if (module.isNull()) return {"", "N/A", false};
 
         String type = module["type"] | "";
 
@@ -680,25 +733,25 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
 
             String valueStr;
             if (decimals >= 0) {
-                // User specified decimals
+                // User specified decimals - NO $ prefix
                 char buf[16];
-                snprintf(buf, sizeof(buf), "$%.*f", decimals, value);
+                snprintf(buf, sizeof(buf), "%.*f", decimals, value);
                 valueStr = String(buf);
             } else {
-                // Auto formatting - avoid K suffix, just show numbers
+                // Auto formatting - avoid K suffix, just show numbers - NO $ prefix
                 if (value >= 10000) {
-                    valueStr = "$" + String((int)value);
+                    valueStr = String((int)value);
                 } else if (value >= 100) {
-                    valueStr = "$" + String((int)value);
+                    valueStr = String((int)value);
                 } else if (value >= 1) {
-                    valueStr = "$" + String(value, 2);
+                    valueStr = String(value, 2);
                 } else if (value >= 0.001) {
-                    valueStr = "$" + String(value, 4);
+                    valueStr = String(value, 4);
                 } else {
-                    valueStr = "$" + String(value, 6);
+                    valueStr = String(value, 6);
                 }
             }
-            return {symbol, valueStr};
+            return {symbol, valueStr, true};  // hasCurrency = true
         } else if (type == "stock") {
             String ticker = module["ticker"] | "?";
             float value = module["value"] | 0.0;
@@ -706,42 +759,42 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
 
             String valueStr;
             if (decimals >= 0) {
-                // User specified decimals
+                // User specified decimals - NO $ prefix
                 char buf[16];
-                snprintf(buf, sizeof(buf), "$%.*f", decimals, value);
+                snprintf(buf, sizeof(buf), "%.*f", decimals, value);
                 valueStr = String(buf);
             } else {
-                // Auto formatting - avoid K suffix
+                // Auto formatting - avoid K suffix - NO $ prefix
                 if (value >= 10000) {
-                    valueStr = "$" + String((int)value);
+                    valueStr = String((int)value);
                 } else if (value >= 100) {
-                    valueStr = "$" + String((int)value);
+                    valueStr = String((int)value);
                 } else if (value >= 1) {
-                    valueStr = "$" + String(value, 2);
+                    valueStr = String(value, 2);
                 } else if (value >= 0.01) {
-                    valueStr = "$" + String(value, 3);
+                    valueStr = String(value, 3);
                 } else {
-                    valueStr = "$" + String(value, 5);
+                    valueStr = String(value, 5);
                 }
             }
-            return {ticker, valueStr};
+            return {ticker, valueStr, true};  // hasCurrency = true
         } else if (type == "weather") {
             float temp = module["temperature"] | 0.0;
             String location = module["location"] | "";
             String unit = module["unit"] | "C";
             // Abbreviate location to first 4 chars
             if (location.length() > 4) location = location.substring(0, 4);
-            return {location, String(temp, 1) + "°" + unit};
+            return {location, String(temp, 1) + "°" + unit, false};
         } else if (type == "custom") {
             float value = module["value"] | 0.0;
             String label = module["label"] | "";
             String unit = module["unit"] | "";
             // Abbreviate label to first 4 chars
             if (label.length() > 4) label = label.substring(0, 4);
-            return {label, String(value, 1) + unit};
+            return {label, String(value, 1) + unit, false};
         }
 
-        return {"", "---"};
+        return {"", "---", false};
     };
 
     // Get data for all 4 slots
@@ -763,10 +816,33 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
             u8g2.drawStr(x + (64 - labelWidth) / 2, y + 8, data.label.c_str());
         }
 
-        // Large font for value in center
-        u8g2.setFont(u8g2_font_helvB14_tr);
-        int valueWidth = u8g2.getStrWidth(data.value.c_str());
-        u8g2.drawStr(x + (64 - valueWidth) / 2, y + 26, data.value.c_str());
+        // Draw value with optional small $ symbol
+        if (data.hasCurrency) {
+            // Small $ font
+            u8g2.setFont(u8g2_font_5x7_tr);
+            int dollarWidth = u8g2.getStrWidth("$");
+
+            // Large font for number
+            u8g2.setFont(u8g2_font_helvB14_tr);
+            int valueWidth = u8g2.getStrWidth(data.value.c_str());
+
+            // Center both together
+            int totalWidth = dollarWidth + 1 + valueWidth;
+            int startX = x + (64 - totalWidth) / 2;
+
+            // Draw small $ at top-left of number
+            u8g2.setFont(u8g2_font_5x7_tr);
+            u8g2.drawStr(startX, y + 20, "$");
+
+            // Draw large number
+            u8g2.setFont(u8g2_font_helvB14_tr);
+            u8g2.drawStr(startX + dollarWidth + 1, y + 26, data.value.c_str());
+        } else {
+            // No currency symbol - just draw value centered
+            u8g2.setFont(u8g2_font_helvB14_tr);
+            int valueWidth = u8g2.getStrWidth(data.value.c_str());
+            u8g2.drawStr(x + (64 - valueWidth) / 2, y + 26, data.value.c_str());
+        }
     };
 
     // Draw all 4 quadrants
