@@ -451,9 +451,12 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             } else if (type === 'weather') {
                 form.innerHTML = `
                     <div class="form-group">
-                        <label>Location:</label>
-                        <input type="text" id="location" value="${data.location || ''}" placeholder="Ricany">
-                        <small style="color: #888; font-size: 11px; display: block; margin-top: 4px;">Enter city name (e.g., "London", "New York", "Prague")</small>
+                        <label>Location (City Name):</label>
+                        <input type="text" id="location" value="${data.location || ''}" placeholder="Enter city name" autocomplete="off">
+                        <small style="color: #888; font-size: 11px; display: block; margin-top: 4px;">
+                            Examples: "London", "New York", "Prague", "Ricany"<br>
+                            Just type the city name and click Save - no search needed!
+                        </small>
                     </div>
                 `;
             } else if (type === 'custom') {

@@ -487,14 +487,15 @@ void DisplayManager::showModule(const char* moduleId) {
         Serial.print(", Price: $");
         Serial.println(price);
 
-        // Use appropriate display based on symbol
+        // All crypto modules use the same display format with $ symbol
+        // (Bitcoin and Ethereum are just legacy names, but all work the same)
         if (strcmp(cryptoSymbol, "BTC") == 0) {
             showBitcoin(price, change, lastUpdate, stale);
         } else if (strcmp(cryptoSymbol, "ETH") == 0) {
             showEthereum(price, change, lastUpdate, stale);
         } else {
-            // Generic crypto display using custom layout
-            showCustom(price, cryptoName, cryptoSymbol, lastUpdate);
+            // Other cryptos (Solana, Doge, etc.) - use Bitcoin display format with $ symbol
+            showBitcoin(price, change, lastUpdate, stale);
         }
     }
     else if (moduleType == "stock") {
