@@ -718,15 +718,15 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
             float temp = module["temperature"] | 0.0;
             String location = module["location"] | "";
             String unit = module["unit"] | "C";
-            // Abbreviate location to first 4 chars
-            if (location.length() > 4) location = location.substring(0, 4);
+            // Truncate location if too long (5x7 font, ~64px width = ~12 chars max)
+            if (location.length() > 10) location = location.substring(0, 10);
             return {location, String(temp, 1) + "°" + unit, false};
         } else if (type == "custom") {
             float value = module["value"] | 0.0;
             String label = module["label"] | "";
             String unit = module["unit"] | "";
-            // Abbreviate label to first 4 chars
-            if (label.length() > 4) label = label.substring(0, 4);
+            // Truncate label if too long (5x7 font, ~64px width = ~12 chars max)
+            if (label.length() > 10) label = label.substring(0, 10);
             return {label, String(value, 1) + unit, false};
         }
 

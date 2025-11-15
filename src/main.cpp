@@ -42,8 +42,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.18.2 ===");
-    Serial.println("Build: Fix Quad Module Slot Save - Nov 15 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.18.3 ===");
+    Serial.println("Build: Increase Quad Label Length - Nov 15 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
