@@ -346,17 +346,23 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
 void DisplayManager::showWeather(float temp, const char* condition, const char* location, unsigned long lastUpdate, bool stale) {
     u8g2.clearBuffer();
 
-    // Temperature - centered vertically to avoid clipping
+    // Temperature - use same font size as other modules
     char tempStr[16];
     snprintf(tempStr, sizeof(tempStr), "%.1f", temp);
 
-    u8g2.setFont(u8g2_font_logisoso32_tn);
+    u8g2.setFont(u8g2_font_logisoso38_tr);
     int tempWidth = u8g2.getStrWidth(tempStr);
-    u8g2.drawStr((128 - tempWidth - 32) / 2, 38, tempStr);
 
-    // Degree symbol and C - use matching larger font
-    u8g2.setFont(u8g2_font_logisoso32_tr);
-    u8g2.drawStr((128 - tempWidth - 32) / 2 + tempWidth + 4, 38, "°C");
+    // Check if too wide, use smaller font
+    if (tempWidth + 35 > 120) {
+        u8g2.setFont(u8g2_font_logisoso32_tr);
+        tempWidth = u8g2.getStrWidth(tempStr);
+    }
+
+    u8g2.drawStr((128 - tempWidth - 32) / 2, 40, tempStr);
+
+    // Degree symbol and C - same font as temp
+    u8g2.drawStr((128 - tempWidth - 32) / 2 + tempWidth + 4, 40, "°C");
 
     // Thin divider line
     u8g2.drawHLine(0, 52, 128);
@@ -376,12 +382,19 @@ void DisplayManager::showWeather(float temp, const char* condition, const char* 
 void DisplayManager::showCustom(float value, const char* label, const char* unit, unsigned long lastUpdate) {
     u8g2.clearBuffer();
 
-    // Value - centered vertically to avoid clipping
+    // Value - use same font size as other modules
     char valueStr[16];
     snprintf(valueStr, sizeof(valueStr), "%.2f", value);
 
-    u8g2.setFont(u8g2_font_logisoso32_tn);
+    u8g2.setFont(u8g2_font_logisoso38_tr);
     int valueWidth = u8g2.getStrWidth(valueStr);
+
+    // Check if too wide, use smaller font
+    if (valueWidth > 120) {
+        u8g2.setFont(u8g2_font_logisoso32_tr);
+        valueWidth = u8g2.getStrWidth(valueStr);
+    }
+
     u8g2.drawStr((128 - valueWidth) / 2, 40, valueStr);
 
     // Thin divider line
