@@ -222,10 +222,11 @@ void DisplayManager::showError(const char* message) {
     currentState = ERROR_STATE;
 }
 
-void DisplayManager::showBitcoin(float price, float change24h, unsigned long lastUpdate, bool stale) {
-    // Get crypto name and decimals from config
-    JsonObject module = config["modules"]["bitcoin"];
-    String cryptoNameStr = module["cryptoName"] | "Bitcoin";
+// Generic crypto display function that works for any crypto module
+void DisplayManager::showCrypto(const char* moduleId, float price, float change24h, unsigned long lastUpdate, bool stale) {
+    // Get crypto name and decimals from config using the actual module ID
+    JsonObject module = config["modules"][moduleId];
+    String cryptoNameStr = module["cryptoName"] | "Crypto";
     int decimals = module["decimals"] | -1;  // -1 = auto
 
     u8g2.clearBuffer();
@@ -280,62 +281,14 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
     currentState = NORMAL;
 }
 
+// Wrapper for backward compatibility
+void DisplayManager::showBitcoin(float price, float change24h, unsigned long lastUpdate, bool stale) {
+    showCrypto("bitcoin", price, change24h, lastUpdate, stale);
+}
+
+// Wrapper for backward compatibility
 void DisplayManager::showEthereum(float price, float change24h, unsigned long lastUpdate, bool stale) {
-    // Get crypto name and decimals from config
-    JsonObject module = config["modules"]["ethereum"];
-    String cryptoNameStr = module["cryptoName"] | "Ethereum";
-    int decimals = module["decimals"] | -1;  // -1 = auto
-
-    u8g2.clearBuffer();
-
-    // Format price with thousand separators (includes $)
-    char priceStr[20];
-    formatPrice(priceStr, sizeof(priceStr), price, decimals);
-
-    // Remove $ from string (we'll draw it separately)
-    const char* numOnly = priceStr + 1;  // Skip first char ($)
-
-    // Large number font - use _tr (proportional) so narrow digits don't have extra space
-    u8g2.setFont(u8g2_font_logisoso38_tr);
-    int numWidth = u8g2.getStrWidth(numOnly);
-    bool useLargeFont = true;
-
-    if (numWidth > 115) {
-        u8g2.setFont(u8g2_font_logisoso32_tr);
-        numWidth = u8g2.getStrWidth(numOnly);
-        useLargeFont = false;
-    }
-
-    // Medium-sized $ symbol (bigger than 6x10, but still smaller than main number)
-    u8g2.setFont(u8g2_font_helvB10_tr);
-    int dollarWidth = u8g2.getStrWidth("$");
-
-    // Center the whole thing ($ + number)
-    int totalWidth = dollarWidth + 1 + numWidth;
-    int startX = (128 - totalWidth) / 2;
-
-    // Draw medium $ aligned to top of numbers
-    u8g2.drawStr(startX, useLargeFont ? 22 : 24, "$");
-
-    // Draw large number (proportional for tight spacing)
-    u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tr : u8g2_font_logisoso32_tr);
-    u8g2.drawStr(startX + dollarWidth + 2, 40, numOnly);
-
-    // Thin divider line between value and bottom info
-    u8g2.drawHLine(0, 52, 128);
-
-    // Change percentage - bottom left corner
-    u8g2.setFont(u8g2_font_6x10_tr);
-    char changeStr[16];
-    const char* sign = (change24h >= 0) ? "+" : "-";
-    snprintf(changeStr, sizeof(changeStr), "%s%.1f%%", sign, fabs(change24h));
-    u8g2.drawStr(2, 62, changeStr);
-
-    // Status bar with label in bottom right
-    drawStatusBar(WiFi.isConnected(), lastUpdate, stale, cryptoNameStr.c_str());
-
-    u8g2.sendBuffer();
-    currentState = NORMAL;
+    showCrypto("ethereum", price, change24h, lastUpdate, stale);
 }
 
 void DisplayManager::showStock(const char* ticker, float price, float change, unsigned long lastUpdate, bool stale) {
@@ -488,14 +441,14 @@ void DisplayManager::showModule(const char* moduleId) {
         Serial.println(price);
 
         // All crypto modules use the same display format with $ symbol
-        // (Bitcoin and Ethereum are just legacy names, but all work the same)
+        // Call the generic showCrypto with the actual module ID for correct name display
         if (strcmp(cryptoSymbol, "BTC") == 0) {
             showBitcoin(price, change, lastUpdate, stale);
         } else if (strcmp(cryptoSymbol, "ETH") == 0) {
             showEthereum(price, change, lastUpdate, stale);
         } else {
-            // Other cryptos (Solana, Doge, etc.) - use Bitcoin display format with $ symbol
-            showBitcoin(price, change, lastUpdate, stale);
+            // Other cryptos (Solana, Doge, etc.) - use generic crypto display with correct module ID
+            showCrypto(moduleId, price, change, lastUpdate, stale);
         }
     }
     else if (moduleType == "stock") {
