@@ -189,17 +189,20 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
     char priceStr[20];
     formatPrice(priceStr, sizeof(priceStr), price, decimals);
 
-    // Use logisoso38 for even bigger numbers, or logisoso32 if text is too long
-    u8g2.setFont(u8g2_font_logisoso38_tn);
+    // Use logisoso38 with symbols (_tr not _tn), or logisoso32 if text is too long
+    u8g2.setFont(u8g2_font_logisoso38_tr);
     int priceWidth = u8g2.getStrWidth(priceStr);
 
     // If too wide, fall back to smaller font
     if (priceWidth > 120) {
-        u8g2.setFont(u8g2_font_logisoso32_tn);
+        u8g2.setFont(u8g2_font_logisoso32_tr);
         priceWidth = u8g2.getStrWidth(priceStr);
     }
 
     u8g2.drawStr((128 - priceWidth) / 2, 40, priceStr);
+
+    // Thin divider line between value and bottom info
+    u8g2.drawHLine(0, 52, 128);
 
     // Change percentage - bottom left corner
     u8g2.setFont(u8g2_font_6x10_tr);
@@ -227,17 +230,20 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
     char priceStr[20];
     formatPrice(priceStr, sizeof(priceStr), price, decimals);
 
-    // Use logisoso38 for even bigger numbers, or logisoso32 if text is too long
-    u8g2.setFont(u8g2_font_logisoso38_tn);
+    // Use logisoso38 with symbols (_tr not _tn), or logisoso32 if text is too long
+    u8g2.setFont(u8g2_font_logisoso38_tr);
     int priceWidth = u8g2.getStrWidth(priceStr);
 
     // If too wide, fall back to smaller font
     if (priceWidth > 120) {
-        u8g2.setFont(u8g2_font_logisoso32_tn);
+        u8g2.setFont(u8g2_font_logisoso32_tr);
         priceWidth = u8g2.getStrWidth(priceStr);
     }
 
     u8g2.drawStr((128 - priceWidth) / 2, 40, priceStr);
+
+    // Thin divider line between value and bottom info
+    u8g2.drawHLine(0, 52, 128);
 
     // Change percentage - bottom left corner
     u8g2.setFont(u8g2_font_6x10_tr);
@@ -264,17 +270,20 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
     char priceStr[20];
     formatPrice(priceStr, sizeof(priceStr), price, decimals);
 
-    // Use logisoso38 for even bigger numbers, or logisoso32 if text is too long
-    u8g2.setFont(u8g2_font_logisoso38_tn);
+    // Use logisoso38 with symbols (_tr not _tn), or logisoso32 if text is too long
+    u8g2.setFont(u8g2_font_logisoso38_tr);
     int priceWidth = u8g2.getStrWidth(priceStr);
 
     // If too wide, fall back to smaller font
     if (priceWidth > 120) {
-        u8g2.setFont(u8g2_font_logisoso32_tn);
+        u8g2.setFont(u8g2_font_logisoso32_tr);
         priceWidth = u8g2.getStrWidth(priceStr);
     }
 
     u8g2.drawStr((128 - priceWidth) / 2, 40, priceStr);
+
+    // Thin divider line between value and bottom info
+    u8g2.drawHLine(0, 52, 128);
 
     // Change percentage - bottom left corner
     u8g2.setFont(u8g2_font_6x10_tr);
