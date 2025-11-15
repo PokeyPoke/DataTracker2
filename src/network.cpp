@@ -1348,6 +1348,32 @@ void NetworkManager::setupSettingsServer() {
         server->send(200, "text/plain", lastSaveResult);
     });
 
+    // Weather debug page (no auth for debugging)
+    server->on("/weather-debug", HTTP_GET, [this]() {
+        String html = "<!DOCTYPE html><html><head><title>Weather Debug</title>";
+        html += "<style>body{font-family:monospace;padding:20px;max-width:800px;margin:0 auto}";
+        html += "button{padding:10px 20px;font-size:16px;margin:10px 0}";
+        html += "pre{background:#f5f5f5;padding:15px;border-radius:5px;overflow-x:auto}";
+        html += ".result{margin-top:20px}</style></head><body>";
+        html += "<h1>Weather Module Debug</h1>";
+        html += "<p>Click the button to fetch weather and see the raw data:</p>";
+        html += "<button onclick='fetchWeather()'>Fetch Weather Now</button>";
+        html += "<div class='result' id='result'></div>";
+        html += "<script>function fetchWeather(){";
+        html += "document.getElementById('result').innerHTML='<p>Fetching...</p>';";
+        html += "fetch('/api/force-weather').then(r=>r.json()).then(d=>{";
+        html += "document.getElementById('result').innerHTML='<h2>Result:</h2><pre>'+JSON.stringify(d,null,2)+'</pre>'";
+        html += "+'<h3>Summary:</h3><p><strong>Location:</strong> '+d.location+'</p>'";
+        html += "+'<p><strong>Temperature:</strong> '+d.temperature+' C</p>'";
+        html += "+'<p><strong>Condition:</strong> '+d.condition+'</p>'";
+        html += "+'<p><strong>Last Update:</strong> '+d.lastUpdate+' seconds</p>'";
+        html += "+'<p><strong>Success:</strong> '+d.lastSuccess+'</p>'";
+        html += "+(d.lastError?'<p><strong>Error:</strong> '+d.lastError+'</p>':'');";
+        html += "}).catch(e=>{document.getElementById('result').innerHTML='<p style=\"color:red\">Error: '+e+'</p>';});";
+        html += "}</script></body></html>";
+        server->send(200, "text/html", html);
+    });
+
     // Debug endpoint for weather config (no auth for debugging)
     server->on("/api/weather-config", HTTP_GET, [this]() {
         JsonObject weather = config["modules"]["weather"];
