@@ -408,6 +408,11 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                         <label>Name:</label>
                         <input type="text" id="cryptoName" value="${data.cryptoName || ''}" readonly>
                     </div>
+                    <div class="form-group">
+                        <label>Decimal Places:</label>
+                        <input type="number" id="decimals" value="${data.decimals !== undefined ? data.decimals : 'auto'}" min="0" max="8" placeholder="auto">
+                        <small style="color: #888; font-size: 11px;">Leave blank for auto (BTC: 0, ETH: 0, <$1: 4-6)</small>
+                    </div>
                 `;
             } else if (type === 'stock') {
                 form.innerHTML = `
@@ -425,6 +430,11 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                     <div class="form-group">
                         <label>Company Name:</label>
                         <input type="text" id="stockName" value="${data.name || ''}" placeholder="Apple Inc.">
+                    </div>
+                    <div class="form-group">
+                        <label>Decimal Places:</label>
+                        <input type="number" id="decimals" value="${data.decimals !== undefined ? data.decimals : 'auto'}" min="0" max="8" placeholder="auto">
+                        <small style="color: #888; font-size: 11px;">Leave blank for auto (>$100: 0, else: 2)</small>
                     </div>
                 `;
             } else if (type === 'weather') {
@@ -596,10 +606,18 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 data.cryptoId = document.getElementById('cryptoId').value;
                 data.cryptoSymbol = document.getElementById('cryptoSymbol').value;
                 data.cryptoName = document.getElementById('cryptoName').value;
+                const decimalsInput = document.getElementById('decimals').value;
+                if (decimalsInput !== '' && decimalsInput !== 'auto') {
+                    data.decimals = parseInt(decimalsInput);
+                }
                 if (!data.cryptoId) { showMessage('Please search and select a cryptocurrency', 'error'); return; }
             } else if (type === 'stock') {
                 data.ticker = document.getElementById('ticker').value;
                 data.name = document.getElementById('stockName').value;
+                const decimalsInput = document.getElementById('decimals').value;
+                if (decimalsInput !== '' && decimalsInput !== 'auto') {
+                    data.decimals = parseInt(decimalsInput);
+                }
                 if (!data.ticker) { showMessage('Please enter a ticker symbol', 'error'); return; }
             } else if (type === 'weather') {
                 data.location = document.getElementById('location').value;

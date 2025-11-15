@@ -79,6 +79,29 @@ void DisplayManager::drawCenteredValue(const char* value, int y) {
     u8g2.drawStr((128 - width) / 2, y, value);
 }
 
+// Helper to format price with smart decimals or user override
+void formatPrice(char* buffer, size_t bufSize, float price, int userDecimals) {
+    if (userDecimals >= 0) {
+        // User specified decimals
+        snprintf(buffer, bufSize, "$%.*f", userDecimals, price);
+    } else {
+        // Auto decimals based on price magnitude
+        if (price >= 10000) {
+            snprintf(buffer, bufSize, "$%.0f", price);
+        } else if (price >= 1000) {
+            snprintf(buffer, bufSize, "$%.0f", price);  // BTC/ETH: no decimals
+        } else if (price >= 100) {
+            snprintf(buffer, bufSize, "$%.0f", price);
+        } else if (price >= 1) {
+            snprintf(buffer, bufSize, "$%.2f", price);
+        } else if (price >= 0.001) {
+            snprintf(buffer, bufSize, "$%.4f", price);
+        } else {
+            snprintf(buffer, bufSize, "$%.6f", price);
+        }
+    }
+}
+
 void DisplayManager::drawHeader(const char* title) {
     u8g2.setFont(u8g2_font_helvB08_tr);
     u8g2.drawStr(2, 10, title);
@@ -155,34 +178,30 @@ void DisplayManager::showError(const char* message) {
 }
 
 void DisplayManager::showBitcoin(float price, float change24h, unsigned long lastUpdate, bool stale) {
-    // Get crypto name from config
+    // Get crypto name and decimals from config
     JsonObject module = config["modules"]["bitcoin"];
     String cryptoNameStr = module["cryptoName"] | "Bitcoin";
+    int decimals = module["decimals"] | -1;  // -1 = auto
 
     u8g2.clearBuffer();
 
-    // Price with smart formatting - centered vertically
-    char priceStr[16];
-    if (price >= 10000) {
-        snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
-    } else if (price >= 1000) {
-        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
-    } else if (price >= 100) {
-        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
-    } else if (price >= 1) {
-        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
-    } else if (price >= 0.001) {
-        snprintf(priceStr, sizeof(priceStr), "$%.4f", price);
-    } else {
-        snprintf(priceStr, sizeof(priceStr), "$%.6f", price);
+    // Price with smart formatting and currency symbol
+    char priceStr[20];
+    formatPrice(priceStr, sizeof(priceStr), price, decimals);
+
+    // Use logisoso38 for even bigger numbers, or logisoso32 if text is too long
+    u8g2.setFont(u8g2_font_logisoso38_tn);
+    int priceWidth = u8g2.getStrWidth(priceStr);
+
+    // If too wide, fall back to smaller font
+    if (priceWidth > 120) {
+        u8g2.setFont(u8g2_font_logisoso32_tn);
+        priceWidth = u8g2.getStrWidth(priceStr);
     }
 
-    // Use larger font and position to avoid clipping at top
-    u8g2.setFont(u8g2_font_logisoso32_tn);
-    int priceWidth = u8g2.getStrWidth(priceStr);
-    u8g2.drawStr((128 - priceWidth) / 2, 38, priceStr);
+    u8g2.drawStr((128 - priceWidth) / 2, 40, priceStr);
 
-    // Change percentage - bottom left corner with smaller font
+    // Change percentage - bottom left corner
     u8g2.setFont(u8g2_font_6x10_tr);
     char changeStr[16];
     const char* sign = (change24h >= 0) ? "+" : "-";
@@ -197,34 +216,30 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
 }
 
 void DisplayManager::showEthereum(float price, float change24h, unsigned long lastUpdate, bool stale) {
-    // Get crypto name from config
+    // Get crypto name and decimals from config
     JsonObject module = config["modules"]["ethereum"];
     String cryptoNameStr = module["cryptoName"] | "Ethereum";
+    int decimals = module["decimals"] | -1;  // -1 = auto
 
     u8g2.clearBuffer();
 
-    // Price with smart formatting - centered vertically
-    char priceStr[16];
-    if (price >= 10000) {
-        snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
-    } else if (price >= 1000) {
-        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
-    } else if (price >= 100) {
-        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
-    } else if (price >= 1) {
-        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
-    } else if (price >= 0.001) {
-        snprintf(priceStr, sizeof(priceStr), "$%.4f", price);
-    } else {
-        snprintf(priceStr, sizeof(priceStr), "$%.6f", price);
+    // Price with smart formatting and currency symbol
+    char priceStr[20];
+    formatPrice(priceStr, sizeof(priceStr), price, decimals);
+
+    // Use logisoso38 for even bigger numbers, or logisoso32 if text is too long
+    u8g2.setFont(u8g2_font_logisoso38_tn);
+    int priceWidth = u8g2.getStrWidth(priceStr);
+
+    // If too wide, fall back to smaller font
+    if (priceWidth > 120) {
+        u8g2.setFont(u8g2_font_logisoso32_tn);
+        priceWidth = u8g2.getStrWidth(priceStr);
     }
 
-    // Use larger font and position to avoid clipping at top
-    u8g2.setFont(u8g2_font_logisoso32_tn);
-    int priceWidth = u8g2.getStrWidth(priceStr);
-    u8g2.drawStr((128 - priceWidth) / 2, 38, priceStr);
+    u8g2.drawStr((128 - priceWidth) / 2, 40, priceStr);
 
-    // Change percentage - bottom left corner with smaller font
+    // Change percentage - bottom left corner
     u8g2.setFont(u8g2_font_6x10_tr);
     char changeStr[16];
     const char* sign = (change24h >= 0) ? "+" : "-";
@@ -239,30 +254,29 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
 }
 
 void DisplayManager::showStock(const char* ticker, float price, float change, unsigned long lastUpdate, bool stale) {
+    // Get decimals from config
+    JsonObject module = config["modules"]["stock"];
+    int decimals = module["decimals"] | -1;  // -1 = auto
+
     u8g2.clearBuffer();
 
-    // Price with smart formatting - centered vertically
-    char priceStr[16];
-    if (price >= 10000) {
-        snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
-    } else if (price >= 1000) {
-        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
-    } else if (price >= 100) {
-        snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
-    } else if (price >= 1) {
-        snprintf(priceStr, sizeof(priceStr), "$%.2f", price);
-    } else if (price >= 0.01) {
-        snprintf(priceStr, sizeof(priceStr), "$%.3f", price);
-    } else {
-        snprintf(priceStr, sizeof(priceStr), "$%.5f", price);
+    // Price with smart formatting and currency symbol
+    char priceStr[20];
+    formatPrice(priceStr, sizeof(priceStr), price, decimals);
+
+    // Use logisoso38 for even bigger numbers, or logisoso32 if text is too long
+    u8g2.setFont(u8g2_font_logisoso38_tn);
+    int priceWidth = u8g2.getStrWidth(priceStr);
+
+    // If too wide, fall back to smaller font
+    if (priceWidth > 120) {
+        u8g2.setFont(u8g2_font_logisoso32_tn);
+        priceWidth = u8g2.getStrWidth(priceStr);
     }
 
-    // Use larger font and position to avoid clipping at top
-    u8g2.setFont(u8g2_font_logisoso32_tn);
-    int priceWidth = u8g2.getStrWidth(priceStr);
-    u8g2.drawStr((128 - priceWidth) / 2, 38, priceStr);
+    u8g2.drawStr((128 - priceWidth) / 2, 40, priceStr);
 
-    // Change percentage - bottom left corner with smaller font
+    // Change percentage - bottom left corner
     u8g2.setFont(u8g2_font_6x10_tr);
     char changeStr[16];
     const char* sign = (change >= 0) ? "+" : "-";
@@ -590,45 +604,53 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
         if (type == "crypto") {
             String symbol = module["cryptoSymbol"] | "?";
             float value = module["value"] | 0.0;
-            // Smart formatting based on value magnitude
+            int decimals = module["decimals"] | -1;
+
             String valueStr;
-            if (value >= 1000) {
-                // Large values: show in K format (e.g., "$45K")
-                valueStr = "$" + String((int)(value / 1000)) + "K";
-            } else if (value >= 100) {
-                // Large values: show as integer (e.g., "$850")
-                valueStr = "$" + String((int)value);
-            } else if (value >= 1) {
-                // Medium values: show 2 decimals (e.g., "$5.25")
-                valueStr = "$" + String(value, 2);
-            } else if (value >= 0.001) {
-                // Small values: show 4 decimals (e.g., "$0.1623")
-                valueStr = "$" + String(value, 4);
+            if (decimals >= 0) {
+                // User specified decimals
+                char buf[16];
+                snprintf(buf, sizeof(buf), "$%.*f", decimals, value);
+                valueStr = String(buf);
             } else {
-                // Very small values: show 6 decimals (e.g., "$0.000123")
-                valueStr = "$" + String(value, 6);
+                // Auto formatting - avoid K suffix, just show numbers
+                if (value >= 10000) {
+                    valueStr = "$" + String((int)value);
+                } else if (value >= 100) {
+                    valueStr = "$" + String((int)value);
+                } else if (value >= 1) {
+                    valueStr = "$" + String(value, 2);
+                } else if (value >= 0.001) {
+                    valueStr = "$" + String(value, 4);
+                } else {
+                    valueStr = "$" + String(value, 6);
+                }
             }
             return {symbol, valueStr};
         } else if (type == "stock") {
             String ticker = module["ticker"] | "?";
             float value = module["value"] | 0.0;
-            // Smart formatting based on value magnitude
+            int decimals = module["decimals"] | -1;
+
             String valueStr;
-            if (value >= 1000) {
-                // Large values: show in K format (e.g., "$1K")
-                valueStr = "$" + String((int)(value / 1000)) + "K";
-            } else if (value >= 100) {
-                // Large values: show as integer (e.g., "$850")
-                valueStr = "$" + String((int)value);
-            } else if (value >= 1) {
-                // Medium values: show 2 decimals (e.g., "$5.25")
-                valueStr = "$" + String(value, 2);
-            } else if (value >= 0.01) {
-                // Small values: show 3 decimals (e.g., "$0.123")
-                valueStr = "$" + String(value, 3);
+            if (decimals >= 0) {
+                // User specified decimals
+                char buf[16];
+                snprintf(buf, sizeof(buf), "$%.*f", decimals, value);
+                valueStr = String(buf);
             } else {
-                // Very small values: show 5 decimals (e.g., "$0.00012")
-                valueStr = "$" + String(value, 5);
+                // Auto formatting - avoid K suffix
+                if (value >= 10000) {
+                    valueStr = "$" + String((int)value);
+                } else if (value >= 100) {
+                    valueStr = "$" + String((int)value);
+                } else if (value >= 1) {
+                    valueStr = "$" + String(value, 2);
+                } else if (value >= 0.01) {
+                    valueStr = "$" + String(value, 3);
+                } else {
+                    valueStr = "$" + String(value, 5);
+                }
             }
             return {ticker, valueStr};
         } else if (type == "weather") {
