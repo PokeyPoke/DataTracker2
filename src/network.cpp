@@ -2000,10 +2000,11 @@ void NetworkManager::setupSettingsServer() {
             if (doc.containsKey("value")) module["value"] = doc["value"];
             if (doc.containsKey("unit")) module["unit"] = sanitize(doc["unit"]);
         } else if (moduleType == "quad") {
-            if (doc.containsKey("slot1")) module["slot1"] = sanitize(doc["slot1"]);
-            if (doc.containsKey("slot2")) module["slot2"] = sanitize(doc["slot2"]);
-            if (doc.containsKey("slot3")) module["slot3"] = sanitize(doc["slot3"]);
-            if (doc.containsKey("slot4")) module["slot4"] = sanitize(doc["slot4"]);
+            // Quad slots contain module IDs - don't sanitize (they're not user input)
+            if (doc.containsKey("slot1")) module["slot1"] = doc["slot1"].as<String>();
+            if (doc.containsKey("slot2")) module["slot2"] = doc["slot2"].as<String>();
+            if (doc.containsKey("slot3")) module["slot3"] = doc["slot3"].as<String>();
+            if (doc.containsKey("slot4")) module["slot4"] = doc["slot4"].as<String>();
         }
 
         // Save configuration
