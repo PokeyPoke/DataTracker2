@@ -459,6 +459,8 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                         <label>Selected Location:</label>
                         <input type="text" id="location" value="${data.location || ''}" readonly style="background:#f5f5f5">
                     </div>
+                    <input type="hidden" id="latitude" value="${data.latitude || 0}">
+                    <input type="hidden" id="longitude" value="${data.longitude || 0}">
                 `;
             } else if (type === 'custom') {
                 form.innerHTML = `
@@ -590,7 +592,7 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 .then(r => r.json())
                 .then(d => {
                     results.innerHTML = (d.results || []).map(city => `
-                        <div class="search-item" onclick="selectWeather('${city.name.replace(/'/g, "\\'")}')">
+                        <div class="search-item" onclick="selectWeather('${city.name.replace(/'/g, "\\'")}', ${city.latitude}, ${city.longitude})">
                             ${city.name}${city.admin1 ? ', ' + city.admin1 : ''}${city.country ? ' (' + city.country + ')' : ''}
                         </div>
                     `).join('') || '<div class="search-item">No results</div>';
@@ -598,8 +600,10 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 .catch(() => results.innerHTML = '<div class="search-item">Error searching</div>');
             }, 300);
         }
-        function selectWeather(location) {
+        function selectWeather(location, lat, lon) {
             document.getElementById('location').value = location;
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lon;
             document.getElementById('weather-search').value = '';
             document.getElementById('weather-results').style.display = 'none';
         }
@@ -626,8 +630,12 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 if (!data.ticker) { showMessage('Please enter a ticker symbol', 'error'); return; }
             } else if (type === 'weather') {
                 data.location = document.getElementById('location').value;
-                // No latitude/longitude needed - wttr.in accepts city names directly
-                if (!data.location) { showMessage('Please enter a location', 'error'); return; }
+                data.latitude = parseFloat(document.getElementById('latitude').value);
+                data.longitude = parseFloat(document.getElementById('longitude').value);
+                if (!data.location || data.latitude === 0 || data.longitude === 0) {
+                    showMessage('Please search and select a location', 'error');
+                    return;
+                }
             } else if (type === 'custom') {
                 data.label = document.getElementById('label').value;
                 data.value = parseFloat(document.getElementById('value').value) || 0;
