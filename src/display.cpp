@@ -237,13 +237,13 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
     // Remove $ from string (we'll draw it separately)
     const char* numOnly = priceStr + 1;  // Skip first char ($)
 
-    // Large number font - use _tn (numeric monospace) for consistent digit width
-    u8g2.setFont(u8g2_font_logisoso38_tn);
+    // Large number font - use _tr (proportional) so narrow digits don't have extra space
+    u8g2.setFont(u8g2_font_logisoso38_tr);
     int numWidth = u8g2.getStrWidth(numOnly);
     bool useLargeFont = true;
 
     if (numWidth > 115) {
-        u8g2.setFont(u8g2_font_logisoso32_tn);
+        u8g2.setFont(u8g2_font_logisoso32_tr);
         numWidth = u8g2.getStrWidth(numOnly);
         useLargeFont = false;
     }
@@ -259,8 +259,8 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
     // Draw medium $ aligned to top of numbers
     u8g2.drawStr(startX, useLargeFont ? 22 : 24, "$");
 
-    // Draw large number (monospace for consistent spacing)
-    u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tn : u8g2_font_logisoso32_tn);
+    // Draw large number (proportional for tight spacing)
+    u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tr : u8g2_font_logisoso32_tr);
     u8g2.drawStr(startX + dollarWidth + 2, 40, numOnly);
 
     // Thin divider line
@@ -295,13 +295,13 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
     // Remove $ from string (we'll draw it separately)
     const char* numOnly = priceStr + 1;  // Skip first char ($)
 
-    // Large number font - use _tn (numeric monospace) for consistent digit width
-    u8g2.setFont(u8g2_font_logisoso38_tn);
+    // Large number font - use _tr (proportional) so narrow digits don't have extra space
+    u8g2.setFont(u8g2_font_logisoso38_tr);
     int numWidth = u8g2.getStrWidth(numOnly);
     bool useLargeFont = true;
 
     if (numWidth > 115) {
-        u8g2.setFont(u8g2_font_logisoso32_tn);
+        u8g2.setFont(u8g2_font_logisoso32_tr);
         numWidth = u8g2.getStrWidth(numOnly);
         useLargeFont = false;
     }
@@ -317,8 +317,8 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
     // Draw medium $ aligned to top of numbers
     u8g2.drawStr(startX, useLargeFont ? 22 : 24, "$");
 
-    // Draw large number (monospace for consistent spacing)
-    u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tn : u8g2_font_logisoso32_tn);
+    // Draw large number (proportional for tight spacing)
+    u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tr : u8g2_font_logisoso32_tr);
     u8g2.drawStr(startX + dollarWidth + 2, 40, numOnly);
 
     // Thin divider line between value and bottom info
@@ -352,13 +352,13 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
     // Remove $ from string (we'll draw it separately)
     const char* numOnly = priceStr + 1;  // Skip first char ($)
 
-    // Large number font - use _tn (numeric monospace) for consistent digit width
-    u8g2.setFont(u8g2_font_logisoso38_tn);
+    // Large number font - use _tr (proportional) so narrow digits don't have extra space
+    u8g2.setFont(u8g2_font_logisoso38_tr);
     int numWidth = u8g2.getStrWidth(numOnly);
     bool useLargeFont = true;
 
     if (numWidth > 115) {
-        u8g2.setFont(u8g2_font_logisoso32_tn);
+        u8g2.setFont(u8g2_font_logisoso32_tr);
         numWidth = u8g2.getStrWidth(numOnly);
         useLargeFont = false;
     }
@@ -374,8 +374,8 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
     // Draw medium $ aligned to top of numbers
     u8g2.drawStr(startX, useLargeFont ? 22 : 24, "$");
 
-    // Draw large number (monospace for consistent spacing)
-    u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tn : u8g2_font_logisoso32_tn);
+    // Draw large number (proportional for tight spacing)
+    u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tr : u8g2_font_logisoso32_tr);
     u8g2.drawStr(startX + dollarWidth + 2, 40, numOnly);
 
     // Thin divider line between value and bottom info
@@ -398,23 +398,22 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
 void DisplayManager::showWeather(float temp, const char* condition, const char* location, unsigned long lastUpdate, bool stale) {
     u8g2.clearBuffer();
 
-    // Temperature - use monospace font for consistent digit spacing
+    // Temperature - use proportional font for tight spacing
     char tempStr[16];
     snprintf(tempStr, sizeof(tempStr), "%.1f", temp);
 
-    u8g2.setFont(u8g2_font_logisoso38_tn);
+    u8g2.setFont(u8g2_font_logisoso38_tr);
     int tempWidth = u8g2.getStrWidth(tempStr);
 
     // Check if too wide, use smaller font
     if (tempWidth + 35 > 120) {
-        u8g2.setFont(u8g2_font_logisoso32_tn);
+        u8g2.setFont(u8g2_font_logisoso32_tr);
         tempWidth = u8g2.getStrWidth(tempStr);
     }
 
     u8g2.drawStr((128 - tempWidth - 32) / 2, 40, tempStr);
 
-    // Degree symbol and C - use _tr font for symbols
-    u8g2.setFont(u8g2_font_logisoso38_tr);
+    // Degree symbol and C - same font as temp
     u8g2.drawStr((128 - tempWidth - 32) / 2 + tempWidth + 4, 40, "°C");
 
     // Thin divider line
@@ -435,16 +434,16 @@ void DisplayManager::showWeather(float temp, const char* condition, const char* 
 void DisplayManager::showCustom(float value, const char* label, const char* unit, unsigned long lastUpdate) {
     u8g2.clearBuffer();
 
-    // Value - use monospace font for consistent digit spacing
+    // Value - use proportional font for tight spacing
     char valueStr[16];
     snprintf(valueStr, sizeof(valueStr), "%.2f", value);
 
-    u8g2.setFont(u8g2_font_logisoso38_tn);
+    u8g2.setFont(u8g2_font_logisoso38_tr);
     int valueWidth = u8g2.getStrWidth(valueStr);
 
     // Check if too wide, use smaller font
     if (valueWidth > 120) {
-        u8g2.setFont(u8g2_font_logisoso32_tn);
+        u8g2.setFont(u8g2_font_logisoso32_tr);
         valueWidth = u8g2.getStrWidth(valueStr);
     }
 

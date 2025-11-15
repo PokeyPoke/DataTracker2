@@ -42,8 +42,8 @@ void handleSerialCommand();
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.16.2 ===");
-    Serial.println("Build: Monospace Digits for Consistent Spacing - Nov 15 2024");
+    Serial.println("\n\n=== ESP32-C3 Data Tracker v2.16.3 ===");
+    Serial.println("Build: Proportional Fonts for Tight Spacing - Nov 15 2024");
     Serial.println("Initializing...\n");
 
     // Initialize storage
