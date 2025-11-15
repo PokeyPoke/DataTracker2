@@ -248,16 +248,16 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
         useLargeFont = false;
     }
 
-    // Small $ symbol
-    u8g2.setFont(u8g2_font_6x10_tr);
+    // Medium-sized $ symbol (bigger than 6x10, but still smaller than main number)
+    u8g2.setFont(u8g2_font_helvB10_tr);
     int dollarWidth = u8g2.getStrWidth("$");
 
     // Center the whole thing ($ + number)
-    int totalWidth = dollarWidth + 2 + numWidth;
+    int totalWidth = dollarWidth + 1 + numWidth;
     int startX = (128 - totalWidth) / 2;
 
-    // Draw small $ aligned to top of numbers
-    u8g2.drawStr(startX, useLargeFont ? 18 : 20, "$");
+    // Draw medium $ aligned to top of numbers
+    u8g2.drawStr(startX, useLargeFont ? 22 : 24, "$");
 
     // Draw large number
     u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tr : u8g2_font_logisoso32_tr);
@@ -306,16 +306,16 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
         useLargeFont = false;
     }
 
-    // Small $ symbol
-    u8g2.setFont(u8g2_font_6x10_tr);
+    // Medium-sized $ symbol (bigger than 6x10, but still smaller than main number)
+    u8g2.setFont(u8g2_font_helvB10_tr);
     int dollarWidth = u8g2.getStrWidth("$");
 
     // Center the whole thing ($ + number)
-    int totalWidth = dollarWidth + 2 + numWidth;
+    int totalWidth = dollarWidth + 1 + numWidth;
     int startX = (128 - totalWidth) / 2;
 
-    // Draw small $ aligned to top of numbers
-    u8g2.drawStr(startX, useLargeFont ? 18 : 20, "$");
+    // Draw medium $ aligned to top of numbers
+    u8g2.drawStr(startX, useLargeFont ? 22 : 24, "$");
 
     // Draw large number
     u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tr : u8g2_font_logisoso32_tr);
@@ -363,16 +363,16 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
         useLargeFont = false;
     }
 
-    // Small $ symbol
-    u8g2.setFont(u8g2_font_6x10_tr);
+    // Medium-sized $ symbol (bigger than 6x10, but still smaller than main number)
+    u8g2.setFont(u8g2_font_helvB10_tr);
     int dollarWidth = u8g2.getStrWidth("$");
 
     // Center the whole thing ($ + number)
-    int totalWidth = dollarWidth + 2 + numWidth;
+    int totalWidth = dollarWidth + 1 + numWidth;
     int startX = (128 - totalWidth) / 2;
 
-    // Draw small $ aligned to top of numbers
-    u8g2.drawStr(startX, useLargeFont ? 18 : 20, "$");
+    // Draw medium $ aligned to top of numbers
+    u8g2.drawStr(startX, useLargeFont ? 22 : 24, "$");
 
     // Draw large number
     u8g2.setFont(useLargeFont ? u8g2_font_logisoso38_tr : u8g2_font_logisoso32_tr);
@@ -816,10 +816,10 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
             u8g2.drawStr(x + (64 - labelWidth) / 2, y + 8, data.label.c_str());
         }
 
-        // Draw value with optional small $ symbol
+        // Draw value with optional medium $ symbol
         if (data.hasCurrency) {
-            // Small $ font
-            u8g2.setFont(u8g2_font_5x7_tr);
+            // Medium $ font (bigger but still smaller than number)
+            u8g2.setFont(u8g2_font_helvB08_tr);
             int dollarWidth = u8g2.getStrWidth("$");
 
             // Large font for number
@@ -830,9 +830,9 @@ void DisplayManager::showQuadScreen(const char* slot1, const char* slot2, const 
             int totalWidth = dollarWidth + 1 + valueWidth;
             int startX = x + (64 - totalWidth) / 2;
 
-            // Draw small $ at top-left of number
-            u8g2.setFont(u8g2_font_5x7_tr);
-            u8g2.drawStr(startX, y + 20, "$");
+            // Draw medium $ at top-left of number
+            u8g2.setFont(u8g2_font_helvB08_tr);
+            u8g2.drawStr(startX, y + 22, "$");
 
             // Draw large number
             u8g2.setFont(u8g2_font_helvB14_tr);
