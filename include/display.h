@@ -31,7 +31,7 @@ private:
     // Helper drawing functions
     void drawCenteredText(const char* text, int y, const uint8_t* font);
     void drawCenteredValue(const char* value, int y);
-    void drawStatusBar(bool wifiConnected, unsigned long lastUpdate, bool isStale);
+    void drawStatusBar(bool wifiConnected, unsigned long lastUpdate, bool isStale, const char* label = nullptr);
     void drawHeader(const char* title);
     void drawQRCode(const char* data, int x, int y, int scale);
 

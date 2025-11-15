@@ -84,17 +84,21 @@ void DisplayManager::drawHeader(const char* title) {
     u8g2.drawStr(2, 10, title);
 }
 
-void DisplayManager::drawStatusBar(bool wifiConnected, unsigned long lastUpdate, bool isStale) {
+void DisplayManager::drawStatusBar(bool wifiConnected, unsigned long lastUpdate, bool isStale, const char* label) {
     u8g2.setFont(u8g2_font_6x10_tr);
 
-    // Timestamp (moved to left since we removed WiFi indicator)
-    String timeAgo = getTimeAgo(lastUpdate);
-    u8g2.drawStr(2, 62, timeAgo.c_str());
-
-    // Stale indicator with WiFi symbol crossed out
+    // WiFi indicator centered at bottom
     if (isStale) {
-        // Draw WiFi icon approximation with line through it
-        u8g2.drawStr(115, 62, "⊘");  // Or we can draw custom WiFi symbol
+        // Draw WiFi symbol crossed out (centered)
+        const char* wifiIcon = "⊘";
+        int wifiWidth = u8g2.getStrWidth(wifiIcon);
+        u8g2.drawStr((128 - wifiWidth) / 2, 62, wifiIcon);
+    }
+
+    // Label in bottom right corner
+    if (label && strlen(label) > 0) {
+        int labelWidth = u8g2.getStrWidth(label);
+        u8g2.drawStr(128 - labelWidth - 2, 62, label);
     }
 }
 
@@ -151,17 +155,13 @@ void DisplayManager::showError(const char* message) {
 }
 
 void DisplayManager::showBitcoin(float price, float change24h, unsigned long lastUpdate, bool stale) {
-    // Get crypto name from config and convert to uppercase
+    // Get crypto name from config
     JsonObject module = config["modules"]["bitcoin"];
     String cryptoNameStr = module["cryptoName"] | "Bitcoin";
-    cryptoNameStr.toUpperCase();
 
     u8g2.clearBuffer();
 
-    // Header with actual crypto name
-    drawHeader(cryptoNameStr.c_str());
-
-    // Price with smart formatting
+    // Price with smart formatting - larger, moved up
     char priceStr[16];
     if (price >= 10000) {
         snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
@@ -176,35 +176,35 @@ void DisplayManager::showBitcoin(float price, float change24h, unsigned long las
     } else {
         snprintf(priceStr, sizeof(priceStr), "$%.6f", price);
     }
-    drawCenteredValue(priceStr, 38);
 
-    // Change percentage
-    u8g2.setFont(u8g2_font_helvB08_tr);
+    // Use larger font and position higher
+    u8g2.setFont(u8g2_font_logisoso32_tn);
+    int priceWidth = u8g2.getStrWidth(priceStr);
+    u8g2.drawStr((128 - priceWidth) / 2, 30, priceStr);
+
+    // Change percentage - centered below price
+    u8g2.setFont(u8g2_font_helvB10_tr);
     char changeStr[20];
     const char* sign = (change24h >= 0) ? "+" : "-";
     snprintf(changeStr, sizeof(changeStr), "%s%.1f%% (24h)", sign, fabs(change24h));
     int changeWidth = u8g2.getStrWidth(changeStr);
-    u8g2.drawStr((128 - changeWidth) / 2, 50, changeStr);
+    u8g2.drawStr((128 - changeWidth) / 2, 48, changeStr);
 
-    // Status bar
-    drawStatusBar(WiFi.isConnected(), lastUpdate, stale);
+    // Status bar with label in bottom right
+    drawStatusBar(WiFi.isConnected(), lastUpdate, stale, cryptoNameStr.c_str());
 
     u8g2.sendBuffer();
     currentState = NORMAL;
 }
 
 void DisplayManager::showEthereum(float price, float change24h, unsigned long lastUpdate, bool stale) {
-    // Get crypto name from config and convert to uppercase
+    // Get crypto name from config
     JsonObject module = config["modules"]["ethereum"];
     String cryptoNameStr = module["cryptoName"] | "Ethereum";
-    cryptoNameStr.toUpperCase();
 
     u8g2.clearBuffer();
 
-    // Header with actual crypto name
-    drawHeader(cryptoNameStr.c_str());
-
-    // Price with smart formatting
+    // Price with smart formatting - larger, moved up
     char priceStr[16];
     if (price >= 10000) {
         snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
@@ -219,18 +219,22 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
     } else {
         snprintf(priceStr, sizeof(priceStr), "$%.6f", price);
     }
-    drawCenteredValue(priceStr, 38);
 
-    // Change percentage
-    u8g2.setFont(u8g2_font_helvB08_tr);
+    // Use larger font and position higher
+    u8g2.setFont(u8g2_font_logisoso32_tn);
+    int priceWidth = u8g2.getStrWidth(priceStr);
+    u8g2.drawStr((128 - priceWidth) / 2, 30, priceStr);
+
+    // Change percentage - centered below price
+    u8g2.setFont(u8g2_font_helvB10_tr);
     char changeStr[20];
     const char* sign = (change24h >= 0) ? "+" : "-";
     snprintf(changeStr, sizeof(changeStr), "%s%.1f%% (24h)", sign, fabs(change24h));
     int changeWidth = u8g2.getStrWidth(changeStr);
-    u8g2.drawStr((128 - changeWidth) / 2, 50, changeStr);
+    u8g2.drawStr((128 - changeWidth) / 2, 48, changeStr);
 
-    // Status bar
-    drawStatusBar(WiFi.isConnected(), lastUpdate, stale);
+    // Status bar with label in bottom right
+    drawStatusBar(WiFi.isConnected(), lastUpdate, stale, cryptoNameStr.c_str());
 
     u8g2.sendBuffer();
     currentState = NORMAL;
@@ -239,10 +243,7 @@ void DisplayManager::showEthereum(float price, float change24h, unsigned long la
 void DisplayManager::showStock(const char* ticker, float price, float change, unsigned long lastUpdate, bool stale) {
     u8g2.clearBuffer();
 
-    // Header with ticker
-    drawHeader(ticker);
-
-    // Price with smart formatting
+    // Price with smart formatting - larger, moved up
     char priceStr[16];
     if (price >= 10000) {
         snprintf(priceStr, sizeof(priceStr), "$%.0f", price);
@@ -257,18 +258,22 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
     } else {
         snprintf(priceStr, sizeof(priceStr), "$%.5f", price);
     }
-    drawCenteredValue(priceStr, 38);
 
-    // Change percentage
-    u8g2.setFont(u8g2_font_helvB08_tr);
+    // Use larger font and position higher
+    u8g2.setFont(u8g2_font_logisoso32_tn);
+    int priceWidth = u8g2.getStrWidth(priceStr);
+    u8g2.drawStr((128 - priceWidth) / 2, 30, priceStr);
+
+    // Change percentage - centered below price
+    u8g2.setFont(u8g2_font_helvB10_tr);
     char changeStr[20];
     const char* sign = (change >= 0) ? "+" : "-";
     snprintf(changeStr, sizeof(changeStr), "%s%.1f%% (today)", sign, fabs(change));
     int changeWidth = u8g2.getStrWidth(changeStr);
-    u8g2.drawStr((128 - changeWidth) / 2, 50, changeStr);
+    u8g2.drawStr((128 - changeWidth) / 2, 48, changeStr);
 
-    // Status bar
-    drawStatusBar(WiFi.isConnected(), lastUpdate, stale);
+    // Status bar with ticker in bottom right
+    drawStatusBar(WiFi.isConnected(), lastUpdate, stale, ticker);
 
     u8g2.sendBuffer();
     currentState = NORMAL;
@@ -277,34 +282,26 @@ void DisplayManager::showStock(const char* ticker, float price, float change, un
 void DisplayManager::showWeather(float temp, const char* condition, const char* location, unsigned long lastUpdate, bool stale) {
     u8g2.clearBuffer();
 
-    // Header
-    drawHeader("WEATHER");
-
-    // Temperature
+    // Temperature - larger, positioned higher
     char tempStr[16];
     snprintf(tempStr, sizeof(tempStr), "%.1f", temp);
 
-    u8g2.setFont(u8g2_font_logisoso24_tn);
+    u8g2.setFont(u8g2_font_logisoso32_tn);
     int tempWidth = u8g2.getStrWidth(tempStr);
-    u8g2.drawStr((128 - tempWidth - 24) / 2, 35, tempStr);
+    u8g2.drawStr((128 - tempWidth - 32) / 2, 28, tempStr);
 
-    // Degree symbol and C - use larger matching font
-    u8g2.setFont(u8g2_font_logisoso24_tr);
-    u8g2.drawStr((128 - tempWidth - 24) / 2 + tempWidth + 3, 35, "°C");
+    // Degree symbol and C - use matching larger font
+    u8g2.setFont(u8g2_font_logisoso32_tr);
+    u8g2.drawStr((128 - tempWidth - 32) / 2 + tempWidth + 4, 28, "°C");
 
-    // Condition
-    u8g2.setFont(u8g2_font_helvB08_tr);
+    // Condition - centered below temperature
+    u8g2.setFont(u8g2_font_helvB10_tr);
     int condWidth = u8g2.getStrWidth(condition);
     u8g2.drawStr((128 - condWidth) / 2, 46, condition);
 
-    // Location - strip accents for ASCII-only font (Říčany -> Ricany)
+    // Status bar with location in bottom right
     String cleanLocation = removeAccents(location);
-    u8g2.setFont(u8g2_font_6x10_tr);
-    int locWidth = u8g2.getStrWidth(cleanLocation.c_str());
-    u8g2.drawStr((128 - locWidth) / 2, 56, cleanLocation.c_str());
-
-    // Status bar
-    drawStatusBar(WiFi.isConnected(), lastUpdate, stale);
+    drawStatusBar(WiFi.isConnected(), lastUpdate, stale, cleanLocation.c_str());
 
     u8g2.sendBuffer();
     currentState = NORMAL;
@@ -313,23 +310,23 @@ void DisplayManager::showWeather(float temp, const char* condition, const char* 
 void DisplayManager::showCustom(float value, const char* label, const char* unit, unsigned long lastUpdate) {
     u8g2.clearBuffer();
 
-    // Header with label
-    drawHeader(label);
-
-    // Value
+    // Value - larger, positioned higher
     char valueStr[16];
     snprintf(valueStr, sizeof(valueStr), "%.2f", value);
-    drawCenteredValue(valueStr, 38);
 
-    // Unit
+    u8g2.setFont(u8g2_font_logisoso32_tn);
+    int valueWidth = u8g2.getStrWidth(valueStr);
+    u8g2.drawStr((128 - valueWidth) / 2, 30, valueStr);
+
+    // Unit - centered below value
     if (strlen(unit) > 0) {
-        u8g2.setFont(u8g2_font_helvB08_tr);
+        u8g2.setFont(u8g2_font_helvB10_tr);
         int unitWidth = u8g2.getStrWidth(unit);
-        u8g2.drawStr((128 - unitWidth) / 2, 50, unit);
+        u8g2.drawStr((128 - unitWidth) / 2, 48, unit);
     }
 
-    // Status bar (never stale for manual entry)
-    drawStatusBar(WiFi.isConnected(), lastUpdate, false);
+    // Status bar with label in bottom right (never stale for manual entry)
+    drawStatusBar(WiFi.isConnected(), lastUpdate, false, label);
 
     u8g2.sendBuffer();
     currentState = NORMAL;
