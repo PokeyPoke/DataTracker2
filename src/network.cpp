@@ -154,10 +154,11 @@ const char SETTINGS_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 <div class="form-group">
                     <label>Thousand Separator:</label>
                     <select id="thousandSep">
+                        <option value="">None (1000) ⭐ Recommended</option>
+                        <option value="'">Apostrophe (1'000) - Tight</option>
                         <option value=",">Comma (1,000)</option>
                         <option value=".">Period (1.000)</option>
                         <option value=" ">Space (1 000)</option>
-                        <option value="">None (1000)</option>
                     </select>
                 </div>
                 <button onclick="saveDeviceSettings()">Save Settings</button>
